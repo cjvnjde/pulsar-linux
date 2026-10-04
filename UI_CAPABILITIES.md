@@ -89,10 +89,13 @@ Linux pointer speed and acceleration are separate OS settings, not these hardwar
 | Effect speed | 0–4 | Five-step slider | Encoded and read in status; visual behavior needs testing |
 | Palette | Exactly eight RGB colors | Eight editable swatches | Implemented, testing needed |
 | Selected color | Palette index 0–7 | Select a swatch | Implemented, testing needed |
+| DPI-linked colors | One RGB color per configured stage | Toggle and color pickers on DPI & polling | Implemented in the Linux app; requires the app to stay running |
 
 Display palette positions as 1–8 if desired and convert to backend indices 0–7. Store colors as `#RRGGBB`.
 
 Eight colors are a palette, **not eight independently addressable lighting zones**. Avoid a mouse illustration with eight independently editable LEDs.
+
+DPI linking starts only after a successful GUI Apply. It monitors the active stage about twice per second and selects a static color at the applied brightness. The normal lighting configuration remains in the profile and is restored by disabling linking and applying. Closing the app leaves the last color; reconnects/errors stop following until another Apply. Draft edits never modify the running mapping. This does not establish a native onboard DPI-color association, and RGB values still cannot be read back.
 
 The exact relationship between each effect, speed, brightness, and palette has not been fully characterized. Until tested, do not invent effect-specific restrictions or promise an exact animated preview. A preview can be labeled illustrative.
 

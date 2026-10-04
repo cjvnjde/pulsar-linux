@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 import tempfile
 import traceback
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 if not os.environ.get('PULSAR_TEST_INSTALLED'):
     sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 test_state=tempfile.TemporaryDirectory(prefix='pulsar-gui-test-')
@@ -17,6 +17,8 @@ from gi.repository import Gtk,GLib
 from pulsar3.gui import Editor,ROOT,WORKING
 
 app=Editor(offline=True,profile_path=ROOT/'pulsar3/data/default.json')
+# Hardware Apply below is simulated, including the host-side lighting worker.
+app.follower = Mock()
 failed=[]
 
 def later(callback,delay=300):
@@ -54,6 +56,14 @@ def checks():
     app.dpi_widgets[0].set_value(850)
     assert app.config['dpi'][0]==800
     app.remove_stage(5);app.add_stage();assert len(app.config['dpi'])==6
+    app.dpi_link_switch.set_active(True)
+    assert app.config['dpi_lighting']['enabled']
+    from gi.repository import Gdk
+    rgba=Gdk.RGBA();rgba.parse('#123456');app.dpi_color_pickers[1].set_rgba(rgba)
+    assert app.config['dpi_lighting']['colors'][1]=='#123456'
+    app.remove_stage(0)
+    assert app.config['dpi_lighting']['colors'][0]=='#123456'
+    app.add_stage();assert len(app.config['dpi_lighting']['colors'])==len(app.config['dpi'])
     app.select_rate(500);assert app.config['polling_hz']==500
     app.select_effect('breath');app.select_color(3)
     assert app.config['lighting']['selected_color']==3
@@ -90,6 +100,18 @@ def checks():
         app.apply()
         assert write.call_count==1
     assert app.doc.applied==app.config and not app.doc.pending
+    app.follower.configure.assert_called_with(app.doc.applied)
+    app.dpi_link_switch.set_active(False)
+    assert app.doc.applied['dpi_lighting']['enabled']  # unsent edits do not stop linking
+    app.follower.revision=10
+    app.follow_update(9,{'error':'stale error'})
+    assert app.ready
+    app.follow_update(10,{'status':status,'stage':2,'color':'#123456'})
+    assert 'Stage 2 → #123456' in app.dpi_follow_label.get_text()
+    assert 'Editor changes take effect after Apply' in app.dpi_follow_label.get_text()
+    with patch.object(app,'run_task',successful_task), patch.object(app,'write_profile'):
+        app.apply()
+    assert not app.follower.configure.call_args.args[0]['dpi_lighting']['enabled']
     # Recorder controls and capture handlers must work without global hooks.
     from pulsar3.recorder import RecorderDialog
     from gi.repository import Gdk

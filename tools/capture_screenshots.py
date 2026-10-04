@@ -34,6 +34,7 @@ example['name'] = 'Everyday'
 example['dpi'] = [400, 800, 1600, 3200]
 example['lighting'].update(mode='static', brightness=4, speed=2, selected_color=0)
 example['lighting']['colors'] = ['#f1df23', '#38bdf8', '#a78bfa', '#fb7185', '#4ade80', '#fb923c', '#22d3ee', '#ffffff']
+example['dpi_lighting'] = {'enabled': True, 'colors': example['lighting']['colors'][:len(example['dpi'])]}
 macro = {'slot': 0, 'repeat': 1, 'events': []}
 append_tap(macro, 6, 50, 1)
 example['macros'] = [macro]
@@ -89,7 +90,7 @@ def next_page():
     preview = Gtk.Window(title='Pulsar 3 Studio · screenshot preview',
                          application=app, transient_for=app.window, modal=True,
                          default_width=1180,
-                         default_height={'dpi':1080, 'buttons':1240, 'lighting':1200, 'macros':1360}[page])
+                         default_height={'dpi':1200, 'buttons':1240, 'lighting':1380, 'macros':1360}[page])
     preview.add_css_class('pulsar')
     preview.set_child(content)
     app.preview_window = preview

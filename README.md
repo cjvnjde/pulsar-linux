@@ -21,7 +21,7 @@ other HATOR models, wireless receivers, and Pulsar Gaming Gears mice is not esta
 |---|---|
 | Buttons | Six-button mouse diagram, standard mouse/DPI/media actions, keyboard shortcuts, macro bindings, advanced action bytes |
 | Sensitivity | 1–6 stages, 200–12000 DPI in steps of 100, 125/250/500/1000 Hz polling |
-| Lighting | Off, static, breathing, neon, wave, press, chase; brightness/speed; eight RGB palette entries |
+| Lighting | Off, static, breathing, neon, wave, press, chase; brightness/speed; eight RGB palette entries; automatic color per DPI stage while the app runs |
 | Macros | Twelve slots, event editor, focused keyboard recording, delays, repeat count, three playback modes, capacity validation |
 | Profiles | Named local files, open/save/save as, revert edits, Advanced JSON |
 | Linux access | Graphical password dialog for temporary device permissions; live status and connection errors |
@@ -135,6 +135,20 @@ and does not detach normal mouse/keyboard drivers.
 The physical DPI button switches stages. The old software-stage-selection command
 was ignored by the tested mouse and is not exposed as a working control.
 
+### Color per DPI stage
+
+On **DPI & polling**, enable **Link lighting color to DPI stage**, choose the swatch
+beside each stage, then **Apply to mouse**. Pressing the DPI button changes the
+lighting to that stage’s color, using static lighting and the profile’s brightness.
+The app checks the active stage about twice per second.
+
+Keep the app open or minimized. Closing it stops automatic changes and leaves the
+last color set; after restarting, Apply again to resume. To restore your normal
+effect and palette, disable linking and Apply. Profile edits and Save alone do
+not change the active mapping. After a device error or reconnect, restore access
+if needed and Apply again. This is a Linux app feature, not a verified onboard
+DPI-to-color setting. The one-shot CLI Apply command does not start the follower.
+
 ## Profiles and history
 
 The application follows XDG directory settings:
@@ -162,6 +176,7 @@ hardware backups.
 
 - Native status and configuration communication work on a connected `379a:3910` mouse.
 - Polling/lighting changes were checked through a device-status round trip.
+- DPI-linked colors were checked with the physical DPI button through all six stages; the user confirmed visible color changes.
 - DPI and standard button settings were transmitted successfully.
 - Packet construction matches original executable fixtures, including 288 button
   conversions and 21 macro vectors.

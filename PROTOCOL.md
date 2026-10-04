@@ -120,3 +120,34 @@ The executable contains older IC553/IC560 functions, including full profile read
 Their presence does not establish applicability to IC571. In particular, legacy
 active-stage `0B` was tried, did not change live status, and is not exposed in the UI.
 No speculative read/write opcodes, firmware flashing or hardware resets are used.
+
+## Host-side DPI-linked lighting
+
+`pulsar3/dpi_lighting.py` polls the existing status sync command roughly every
+0.5 seconds while the GUI runs. After a successful Apply, an optional
+`dpi_lighting` profile object supplies an `enabled` boolean and one `#RRGGBB`
+color per DPI stage. It is host metadata; ordinary `plan`/CLI Apply packets are
+unchanged, and no new firmware opcode or onboard association is assumed.
+
+At startup after Apply, the follower establishes static mode and selected-color
+index 0 using Parameter 0, preserving polling rate, stage count, brightness and
+speed from the applied snapshot. It then writes the active stage’s RGB value
+into palette slot 0 using Parameter 1 with **mask 2 only**. Subsequent stage
+changes use only this palette command. The other seven palette entries retain
+their normal profile values. An unchanged color causes no configuration write.
+DPI values, button assignments and macros are never sent by the follower.
+
+Hardware check on 2026-10-04: sending Parameter 0 on every color change caused
+the active DPI stage to return to stage 2. Using palette-only updates instead
+allowed the physical button to cycle through all six stages without that reset.
+The user confirmed visible color changes. Keep Parameter 0 out of the stage-change
+path; even an otherwise identical parameters write has this firmware side effect.
+Full Apply (including the initial lighting setup) can still reset the active stage.
+
+The worker shares a transaction lock with GUI Apply/status/access operations,
+releases interface 2 between polls, and ignores stale profile revisions. Device
+errors, invalid stages or unexpected polling/lighting status disarm it until
+another successful Apply. It does not automatically resume after reconnecting,
+because the mouse cannot provide a full profile readback. Disabling linking and
+applying restores the ordinary lighting configuration. Closing leaves the last
+color selected. Colors themselves remain unavailable in readback.

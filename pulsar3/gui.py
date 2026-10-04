@@ -18,6 +18,7 @@ from .editor_model import (ACTION_LABELS, BUTTON_LABELS, KEY_NAMES, MODIFIERS, P
     ProfileDocument, action_label, append_tap, effective_delay, key_label, macro_bytes,
     new_macro, remove_macro)
 from .protocol import ACTIONS, BUTTONS, MODES, encode_macro, plan
+from .dpi_lighting import DpiLightingFollower
 from .transport import discover
 from .paths import DEFAULT_PROFILE, ROOT, initial_profile, profiles_dir, working_profile
 
@@ -138,6 +139,11 @@ class Editor(Gtk.Application):
         self.last_config_page = 'dpi'
         self.page = 'dpi'
         self.allow_close = False
+        self.device_lock = threading.Lock()
+        self.follower = DpiLightingFollower(self.device_lock,
+            lambda revision, update: GLib.idle_add(self.follow_update, revision, update))
+        self.follow_message = None
+        self.connect('shutdown', lambda *_: self.follower.close())
 
     @property
     def config(self):
@@ -269,6 +275,7 @@ class Editor(Gtk.Application):
         self.validate_button.set_sensitive(not self.busy)
         if hasattr(self,'json_buffer') and not self.raw_dirty:
             self.sync_json()
+        self.update_follow_labels()
 
     def notify(self, text, error=False):
         self.message.set_text(text)
@@ -286,10 +293,26 @@ class Editor(Gtk.Application):
         heading.append(label(f"{len(self.config['dpi'])} / 6 stages", 'muted small'))
         add = button('+ Add stage', lambda _: self.add_stage(), 'primary'); add.set_sensitive(len(self.config['dpi'])<6); heading.append(add)
         panel.append(heading)
+        link = box(spacing=12)
+        text = label('Link lighting color to DPI stage'); text.set_hexpand(True); link.append(text)
+        self.dpi_link_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
+        self.dpi_link_switch.set_active(self.config.get('dpi_lighting', {}).get('enabled', False))
+        self.dpi_link_switch.set_tooltip_text('Use the color beside each stage while this app is running')
+        self.dpi_link_switch.connect('notify::active', self.toggle_dpi_lighting)
+        link.append(self.dpi_link_switch); panel.append(link)
+        panel.append(label('Apply to start. Uses static lighting at your chosen brightness; keep the app open or minimized.', 'muted small', True))
         self.dpi_widgets = []
+        self.dpi_color_pickers = []
+        stage_colors = self.config.get('dpi_lighting', {}).get('colors', self.config['lighting']['colors'])
         for index, value in enumerate(self.config['dpi']):
             row = box(spacing=14, css='stage-row')
             number = label(f'{index+1:02}', 'accent-text'); number.set_width_chars(2); row.append(number)
+            rgba = Gdk.RGBA(); rgba.parse(stage_colors[index])
+            picker = Gtk.ColorDialogButton.new(Gtk.ColorDialog(title=f'DPI stage {index+1} color', with_alpha=False))
+            picker.set_rgba(rgba)
+            picker.set_tooltip_text(f'Stage {index+1} lighting color · {stage_colors[index]}')
+            picker.connect('notify::rgba', self.dpi_color_picked, index)
+            row.append(picker); self.dpi_color_pickers.append(picker)
             name = label(f'Stage {index+1}'); name.set_size_request(70,-1); row.append(name)
             adjustment = Gtk.Adjustment(value=value, lower=200, upper=12000, step_increment=100, page_increment=500)
             scale = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adjustment, digits=0, draw_value=False)
@@ -302,6 +325,8 @@ class Editor(Gtk.Application):
             adjustment.connect('value-changed', self.change_dpi, index)
             self.dpi_widgets.append(adjustment); panel.append(row)
         panel.append(label('Use the mouse’s DPI button to switch active stages. These controls edit their sensitivity.', 'muted small', True))
+        self.dpi_follow_label = label('', 'muted small', True); panel.append(self.dpi_follow_label)
+        self.update_follow_labels()
         rates = card('Polling rate', 'How often the mouse reports input to your computer.'); content.append(rates)
         row = box(spacing=10); rates.append(row)
         self.rate_buttons = {}
@@ -321,11 +346,55 @@ class Editor(Gtk.Application):
 
     def add_stage(self):
         if len(self.config['dpi']) < 6:
+            if 'dpi_lighting' in self.config:
+                self.config['dpi_lighting']['colors'].append(self.config['lighting']['colors'][len(self.config['dpi'])])
             self.config['dpi'].append(min(12000,self.config['dpi'][-1]+400)); self.build_dpi(); self.changed()
 
     def remove_stage(self, index):
         if len(self.config['dpi']) > 1:
+            if 'dpi_lighting' in self.config:
+                del self.config['dpi_lighting']['colors'][index]
             del self.config['dpi'][index]; self.build_dpi(); self.changed()
+
+    def dpi_lighting_config(self):
+        return self.config.setdefault('dpi_lighting', {'enabled': False,
+            'colors': self.config['lighting']['colors'][:len(self.config['dpi'])]})
+
+    def toggle_dpi_lighting(self, widget, *_):
+        self.dpi_lighting_config()['enabled'] = widget.get_active()
+        self.changed()
+
+    def dpi_color_picked(self, widget, _, index):
+        rgba = widget.get_rgba()
+        color = '#' + ''.join(f'{round(x*255):02x}' for x in (rgba.red, rgba.green, rgba.blue))
+        self.dpi_lighting_config()['colors'][index] = color
+        widget.set_tooltip_text(f'Stage {index+1} lighting color · {color}')
+        self.changed()
+
+    def update_follow_labels(self):
+        text = self.follow_message or ('Apply this profile to start following DPI changes.'
+            if self.config.get('dpi_lighting', {}).get('enabled') else 'DPI color linking is off in this profile.')
+        if self.follow_message and self.doc.pending:
+            text += ' Editor changes take effect after Apply.'
+        if self.config.get('dpi_lighting', {}).get('enabled') and self.config['lighting']['brightness'] == 0:
+            text += ' Brightness is zero: increase it on Lighting to see colors.'
+        for name in ('dpi_follow_label', 'lighting_follow_label'):
+            if hasattr(self, name): getattr(self, name).set_text(text)
+
+    def follow_update(self, revision, update):
+        # Ignore queued results from a replaced profile or a foreground command.
+        if revision != self.follower.revision or (self.busy and 'error' not in update):
+            return False
+        if 'error' in update:
+            self.device_error(update['error'])
+            self.follow_message = 'DPI colors stopped. Fix device access or connection, then Apply to restart.'
+        else:
+            self.receive_status(update['status'])
+            name = (self.doc.applied or {}).get('name') or 'Untitled profile'
+            self.follow_message = f'Following applied profile “{name}” · Stage {update["stage"]} → {update["color"]}'
+        self.update_follow_labels()
+        self.apply_button.set_sensitive(not self.busy and not self.raw_dirty and self.ready and not self.offline)
+        return False
 
     def select_rate(self, hz):
         self.config['polling_hz']=hz
@@ -336,6 +405,10 @@ class Editor(Gtk.Application):
     # Lighting ------------------------------------------------------------
     def build_lighting(self):
         content = self.page_header('lighting'); lighting = self.config['lighting']
+        linked = card('DPI stage colors', 'DPI linking uses a static color per stage and this page’s brightness. Your normal effect and palette are restored when linking is disabled and the profile is applied.')
+        self.lighting_follow_label = label('', 'muted small', True); linked.append(self.lighting_follow_label)
+        linked.append(button('Edit DPI stage colors', lambda _: self.navigate('dpi')))
+        content.append(linked); self.update_follow_labels()
         effects = card('Lighting effect'); content.append(effects)
         grid = Gtk.Grid(column_spacing=10,row_spacing=10); effects.append(grid)
         self.effect_buttons = {}
@@ -792,10 +865,12 @@ class Editor(Gtk.Application):
 
     def run_task(self,command,callback):
         if self.busy:return
+        self.follower.pause()
         self.busy=True;self.stack.set_sensitive(False);self.spinner.start();self.changed()
         def worker():
             try:
-                result=subprocess.run(command,cwd=ROOT,capture_output=True,text=True,timeout=180)
+                with self.device_lock:
+                    result=subprocess.run(command,cwd=ROOT,capture_output=True,text=True,timeout=180)
                 values=(result.returncode,result.stdout,result.stderr)
             except Exception as error:values=(1,'',str(error))
             GLib.idle_add(done,*values)
@@ -803,6 +878,8 @@ class Editor(Gtk.Application):
             self.busy=False;self.stack.set_sensitive(True);self.spinner.stop()
             try:callback(code,out,err)
             except (ValueError,KeyError,TypeError,OSError) as error:self.notify(f'Could not finish operation: {error}',True)
+            # A callback can start another task (authorization -> status).
+            if not self.busy:self.follower.resume()
             self.changed();return False
         threading.Thread(target=worker,daemon=True).start()
 
@@ -820,6 +897,9 @@ class Editor(Gtk.Application):
         self.ready=True;self.connection.set_label('● Connected');self.update_live()
 
     def device_error(self,error):
+        self.follower.configure()
+        if self.follow_message:
+            self.follow_message='DPI colors stopped. Fix device access or connection, then Apply to restart.'
         self.ready=False
         if 'Permission denied' in error:
             title='Access required';message='Click Device → Enable device access, then use the system password dialog.'
@@ -850,6 +930,7 @@ class Editor(Gtk.Application):
             snapshot=self.doc.validated()
             with tempfile.NamedTemporaryFile(mode='w',suffix='.json',prefix='pulsar-apply-',delete=False) as f:
                 json.dump(snapshot,f);temporary=Path(f.name)
+            self.follower.configure();self.follow_message=None
             self.notify('Applying profile, including macro definitions…')
             def finish(code,out,err):
                 temporary.unlink(missing_ok=True)
@@ -857,6 +938,9 @@ class Editor(Gtk.Application):
                     self.doc.applied=None
                     self.device_error(err);self.notify((err.strip() or 'Transfer failed.')+' Some settings may have been applied. Fix access/connection and retry.',True);return
                 result=json.loads(out);self.doc.mark_applied(snapshot);self.receive_status(result['status'])
+                self.follower.configure(snapshot)
+                if snapshot.get('dpi_lighting', {}).get('enabled'):
+                    self.follow_message='Starting DPI colors for the applied profile…'
                 try:
                     self.write_profile(WORKING,snapshot)
                     if self.profile_path==WORKING:self.doc.mark_saved(snapshot)

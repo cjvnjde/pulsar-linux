@@ -67,7 +67,7 @@ The dark interface uses a sidebar for **Buttons**, **DPI & polling**, **Lighting
 | Page | Controls |
 |---|---|
 | Buttons | Click the mouse diagram or a button row, select an action category, configure the action, and click **Assign** |
-| DPI & polling | Add/remove stages, edit stepped sliders or numeric values, select polling rate |
+| DPI & polling | Add/remove stages, edit stepped sliders or numeric values, select polling rate, link a color to each stage |
 | Lighting | Choose an effect, brightness and speed, edit eight RGB swatches with color pickers or hex fields, select the active palette color |
 | Macros | Create/duplicate/delete macros, edit/reorder events, add shortcuts, record keyboard input, and inspect validation/capacity |
 | Profiles | Profile name, Save, Save as, Open JSON, Revert edits, and local profile list |
@@ -94,7 +94,7 @@ The graphical controls and JSON share one profile. JSON text is staged until you
 
 ### Status versus editing
 
-**Device → Refresh status** reads a snapshot of polling rate, active DPI stage, lighting mode, and speed. It does not replace editable profile values. These snapshots may become stale after unplugging or pressing the physical DPI button.
+**Device → Refresh status** reads a snapshot of polling rate, active DPI stage, lighting mode, and speed. It does not replace editable profile values. These snapshots may become stale after unplugging or pressing the physical DPI button. While DPI color linking is active, the app refreshes status about twice per second.
 
 ## 4. Physical buttons and scrolling
 
@@ -252,6 +252,34 @@ Example palette:
 
 Index `0` is the first color. Eight palette entries do **not** mean eight independently controllable physical lighting zones. Which colors and controls affect the display depends on the selected effect; the GUI does not offer individual LED addressing.
 
+### Link lighting to DPI stages
+
+1. Open **DPI & polling** and turn on **Link lighting color to DPI stage**.
+2. Click the color swatch beside each stage and choose its RGB color.
+3. Set a visible **Brightness** on Lighting (zero keeps the LEDs dark).
+4. Click **Apply to mouse**, then use the physical DPI button. The status beneath the stages shows the applied profile, active stage, and color sent.
+
+This feature uses **static lighting** and the profile’s brightness while enabled. Your ordinary lighting effect and eight-color palette remain saved in the profile. Disable linking and Apply to restore them.
+
+The Linux app follows the reported stage about every 0.5 seconds. It must remain open; minimizing is fine. Closing stops following and leaves the last color set. Restarting requires Apply again. There is no startup service or verified onboard custom DPI-color association.
+
+The follower uses the last successfully applied profile. Editing colors, opening another profile, or saving does not change that active mapping until Apply. Removing a stage also removes its assigned color; adding one uses the corresponding normal palette color as its starting value.
+
+Access errors, disconnects, invalid stages, and unexpected polling/lighting settings stop following. Reconnect or fix access, refresh status if needed, then Apply to restart. This avoids automatically writing an old profile to a newly connected mouse. Apply and status commands pause the follower and share device access with it.
+
+Colors cannot be read back: the displayed color is the requested value, not a measurement of the LEDs. After establishing static lighting, the app updates only RGB palette data on stage changes. It does not repeatedly write unchanged colors or resend DPI values, polling rate, buttons, or macros. Individual automatic color changes are not added to the full-profile Apply journal.
+
+Profiles optionally store the mapping as follows (one color per entry in `dpi`):
+
+```json
+"dpi_lighting": {
+  "enabled": true,
+  "colors": ["#ff0000", "#0000ff", "#00ff00", "#ffff00"]
+}
+```
+
+Profiles without this field keep their existing behavior. The GUI runs the follower after Apply; the one-shot CLI Apply command validates and saves this metadata in its journal but does not run the background feature.
+
 ## 7. Macros
 
 The original application has macro upload commands for **12 slots, numbered 0–11**, with **128 bytes per macro**. Our tool implements that format and provides a graphical editor and button assignment controls.
@@ -336,6 +364,7 @@ A JSON profile contains:
 - Polling rate.
 - DPI stages.
 - Lighting effect, brightness, speed, palette, and color selection.
+- Optional DPI-stage colors and whether the app should follow stage changes after Apply.
 - Assignments for all six physical buttons.
 - Any macro definitions used by those assignments.
 
@@ -361,7 +390,7 @@ There is no automatic per-game switching, application detection, profile hotkey,
 
 Profile files are local saved configurations. They are not complete backups read from the mouse. Independent onboard profile banks and persistence of all settings after power loss have not been verified.
 
-The app sends configuration commands rather than continuously implementing button actions in the background. It does not need to keep sending the profile after Apply, but retain the file so you can reapply it after reconnecting if needed.
+The app sends configuration commands rather than continuously implementing button actions in the background. Ordinary configuration does not require the app to stay open. DPI-linked colors are the exception: the app must keep running to follow stage changes. Retain the profile file so you can reapply it after reconnecting if needed.
 
 The GUI updates `~/.local/share/pulsar3/profiles/linux.json` after a successful hardware transfer. Saving a file separately does not apply it, and a complete hardware readback is unavailable.
 

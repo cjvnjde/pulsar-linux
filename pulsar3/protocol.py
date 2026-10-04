@@ -37,6 +37,11 @@ def only_keys(obj,allowed,name):
     unknown=set(obj)-set(allowed)
     if unknown: raise ValueError(f'Unknown {name} field(s): {", ".join(sorted(unknown))}')
 
+def rgb_bytes(color):
+    if not isinstance(color,str) or len(color)!=7 or color[0]!='#' or any(c not in '0123456789abcdefABCDEF' for c in color[1:]):
+        raise ValueError('Colors must use #RRGGBB')
+    return bytes.fromhex(color[1:])
+
 def sync_packet(): return Packet('status sync',bytes.fromhex('00 80 00 00 00 00 00 00 7f'))
 
 def parameter0(payload,profile=0):
@@ -131,7 +136,7 @@ def encode_macro(spec):
 
 def plan(config,sections=None):
     """Require a complete explicit profile; sections select writes, not implicit defaults."""
-    only_keys(config,('schema','name','polling_hz','dpi','lighting','buttons','macros'),'profile')
+    only_keys(config,('schema','name','polling_hz','dpi','lighting','dpi_lighting','buttons','macros'),'profile')
     if config.get('schema')!=1: raise ValueError('Profile schema must be 1')
     sections=set(sections or ('parameters','dpi','colors','buttons','macros'))
     if sections-{'parameters','dpi','colors','buttons','macros'}: raise ValueError('Unknown section')
@@ -150,10 +155,15 @@ def plan(config,sections=None):
     colors=lighting.get('colors')
     if not isinstance(colors,list) or len(colors)!=8: raise ValueError('Exactly eight RGB colors are required')
     rgb=bytearray()
-    for c in colors:
-        if not isinstance(c,str) or len(c)!=7 or not c.startswith('#'): raise ValueError('Colors must use #RRGGBB')
-        try: rgb.extend(bytes.fromhex(c[1:]))
-        except ValueError: raise ValueError('Colors must use #RRGGBB') from None
+    for c in colors: rgb.extend(rgb_bytes(c))
+    # Optional host-side behavior. It does not change ordinary Apply packets.
+    if 'dpi_lighting' in config:
+        linked=config['dpi_lighting'];only_keys(linked,('enabled','colors'),'dpi_lighting')
+        if type(linked.get('enabled')) is not bool: raise ValueError('dpi_lighting.enabled must be true or false')
+        stage_colors=linked.get('colors')
+        if not isinstance(stage_colors,list) or len(stage_colors)!=len(dpi):
+            raise ValueError('dpi_lighting.colors must contain one color per DPI stage')
+        for c in stage_colors: rgb_bytes(c)
     buttons=config.get('buttons');only_keys(buttons,BUTTONS,'buttons')
     if set(buttons)!=set(BUTTONS): raise ValueError('Specify all six button mappings explicitly')
     keys=[key_action(buttons[b]) for b in BUTTONS]

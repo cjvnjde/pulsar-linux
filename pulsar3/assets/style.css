@@ -48,5 +48,7 @@ window.pulsar { background: #101213; color: #ededeb; font-family: 'Inter', 'Adwa
 .pulsar .swatch { padding: 3px; min-height: 36px; }
 .pulsar .hotspot { min-width: 16px; min-height: 16px; padding: 5px; border-radius: 50%; font-weight: 700; }
 .pulsar checkbutton check:checked { background: #eddf2b; color: #131513; border-color: #eddf2b; }
+.pulsar switch:checked { background: #eddf2b; border-color: #eddf2b; }
+.pulsar switch:checked slider { background: #17191a; border-color: #17191a; }
 .pulsar popover contents { background: #26292b; color: #f1f1ed; }
 .pulsar .divider { background: #333638; min-height: 1px; }
