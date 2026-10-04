@@ -42,6 +42,9 @@ class PackagingTests(unittest.TestCase):
             self.assertEqual(members['debian-binary'],b'2.0\n')
             with tarfile.open(fileobj=io.BytesIO(members['data.tar.gz'])) as payload:
                 self.assertIn('./usr/bin/pulsar3-gui',payload.getnames())
+                directory=payload.getmember('./usr/lib/pulsar3-studio/pulsar3')
+                self.assertTrue(directory.isdir())
+                self.assertLess(payload.getmembers().index(directory),payload.getnames().index('./usr/lib/pulsar3-studio/pulsar3/__init__.py'))
                 self.assertIn('./usr/lib/pulsar3-studio/pulsar3/data/default.json',payload.getnames())
                 self.assertFalse(any('linux.json' in n for n in payload.getnames()))
 

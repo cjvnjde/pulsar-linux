@@ -24,6 +24,22 @@ DOCS = ['README.md', 'LICENSE', 'USER_GUIDE.md', 'UI_CAPABILITIES.md', 'PROTOCOL
 def tar_bytes(files, epoch):
     buffer = io.BytesIO()
     with tarfile.open(fileobj=buffer, mode='w', format=tarfile.PAX_FORMAT) as archive:
+        # dpkg requires parent directories in the archive before their files.
+        # These entries also give the package manager ownership of new directories.
+        directories = set()
+        for name, _, _ in files:
+            parent = name.rpartition('/')[0]
+            while parent and parent != '.':
+                directories.add(parent)
+                parent = parent.rpartition('/')[0]
+        for name in sorted(directories, key=lambda value: (value.count('/'), value)):
+            info = tarfile.TarInfo(name)
+            info.type = tarfile.DIRTYPE
+            info.mode = 0o755
+            info.mtime = epoch
+            info.uid = info.gid = 0
+            info.uname = info.gname = 'root'
+            archive.addfile(info)
         for name, data, mode in sorted(files):
             info = tarfile.TarInfo(name)
             info.size = len(data)
