@@ -31,6 +31,8 @@ class PackagingTests(unittest.TestCase):
                 names=package.getnames()
                 self.assertIn('pulsar3-studio-0.1.0/pulsar3/data/default.json',names)
                 self.assertIn('pulsar3-studio-0.1.0/pulsar3/assets/style.css',names)
+                self.assertIn('pulsar3-studio-0.1.0/docs/screenshots/dpi.png',names)
+                self.assertFalse(any(n.endswith('.exe') or '/sources/windows/' in n for n in names))
                 self.assertEqual(package.getmember('pulsar3-studio-0.1.0/pulsar3-gui').mode,0o755)
                 self.assertFalse(any('/research/' in n or '/history/' in n or '/profiles/' in n for n in names))
             # Independently parse the standard ar container and inspect its payload.
@@ -46,6 +48,6 @@ class PackagingTests(unittest.TestCase):
                 self.assertTrue(directory.isdir())
                 self.assertLess(payload.getmembers().index(directory),payload.getnames().index('./usr/lib/pulsar3-studio/pulsar3/__init__.py'))
                 self.assertIn('./usr/lib/pulsar3-studio/pulsar3/data/default.json',payload.getnames())
-                self.assertFalse(any('linux.json' in n for n in payload.getnames()))
+                self.assertFalse(any('linux.json' in n or n.endswith('.exe') for n in payload.getnames()))
 
 if __name__=='__main__':unittest.main()

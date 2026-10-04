@@ -77,6 +77,8 @@ def build(output, version, epoch):
     prefix = f'pulsar3-studio-{version}'
     runtime = list(runtime_files())
     docs = [(name, (ROOT/name).read_bytes(), 0o644) for name in DOCS]
+    docs += [(str(path.relative_to(ROOT)), path.read_bytes(), 0o644)
+             for path in sorted((ROOT/'docs/screenshots').glob('*.png'))]
     portable = runtime + docs + [('pulsar3-gui', (ROOT/'pulsar3-gui').read_bytes(), 0o755)]
     archive = output/f'{prefix}-linux.tar.gz'
     archive.write_bytes(tar_bytes([(f'{prefix}/{name}', data, mode) for name, data, mode in portable], epoch))

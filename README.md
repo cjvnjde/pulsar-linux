@@ -29,6 +29,29 @@ other HATOR models, wireless receivers, and Pulsar Gaming Gears mice is not esta
 Editing and saving are separate from **Apply to mouse**. The app validates a complete
 profile before sending it and keeps at least one button assigned to left-click.
 
+## Screenshots
+
+Actual GTK4 interface, shown in offline mode with an example profile.
+
+![DPI stages and polling rate](docs/screenshots/dpi.png)
+
+<details>
+<summary>Buttons, lighting, and macro editor</summary>
+
+### Button assignments
+
+![Interactive mouse diagram and button assignments](docs/screenshots/buttons.png)
+
+### RGB lighting
+
+![Lighting effects, brightness, speed, and RGB palette](docs/screenshots/lighting.png)
+
+### Custom macros
+
+![Macro editor with press/release events, delays, and storage usage](docs/screenshots/macros.png)
+
+</details>
+
 ## Download and run
 
 GitHub Actions builds two downloads and `SHA256SUMS` on pushes, pull requests, and
@@ -183,6 +206,7 @@ See the [user guide](USER_GUIDE.md) for selective writes and profile examples.
 python3 -m unittest discover -s tests -v
 python3 tools/gui_smoke.py                 # requires a graphical session
 python3 tools/build_release.py            # writes dist/; standard library only
+python3 tools/capture_screenshots.py      # refresh README images using example data
 ```
 
 The GUI smoke test uses temporary user-data directories and simulated device results;
@@ -201,5 +225,12 @@ GitHub Release. Ordinary branch builds remain Actions artifacts for 30 days.
 
 [MIT](LICENSE), copyright cjvnjde and contributors. This license covers this
 project's code and documentation, not HATOR's proprietary software or trademarks.
-The original Windows installer, extracted QML, and decompiled application are not
-distributed in releases. See [PROTOCOL.md](PROTOCOL.md) for reverse-engineering evidence.
+The original Windows installer is preserved as research reference material in
+[sources/windows](https://github.com/cjvnjde/pulsar-linux/tree/main/sources/windows),
+with its SHA-256 checksum and third-party licensing notice. It is a compiled
+installer, not vendor source code, and is excluded from the Linux application
+packages. GitHub's repository source archives include it. Extracted QML and
+decompiled vendor code are not distributed. See [PROTOCOL.md](PROTOCOL.md) for
+reverse-engineering evidence.
+
+<sub>This project contains AI-generated code created with OpenAI Codex.</sub>
