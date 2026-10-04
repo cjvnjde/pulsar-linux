@@ -1,0 +1,10 @@
+__pycache__/
+research/extracted/
+research/qrc/
+research/decompiled/
+research/disassembly.txt
+research/pe-info.txt
+research/strings.txt
+research/symbols.txt
+research/reference_macro.js
+history/

@@ -1,0 +1,29 @@
+{
+  "before": {
+    "polling_hz": 1000,
+    "dpi_stage": 2,
+    "lighting_mode": "off",
+    "lighting_speed": 4,
+    "event": 255,
+    "raw": "05 00 01 01 00 07 ff",
+    "note": "Live status does not contain DPI values, brightness, colors, button mappings, or macros."
+  },
+  "test": {
+    "polling_hz": 500,
+    "dpi_stage": 2,
+    "lighting_mode": "static",
+    "lighting_speed": 0,
+    "event": 255,
+    "raw": "05 00 02 01 01 01 ff",
+    "note": "Live status does not contain DPI values, brightness, colors, button mappings, or macros."
+  },
+  "restored": {
+    "polling_hz": 1000,
+    "dpi_stage": 2,
+    "lighting_mode": "off",
+    "lighting_speed": 4,
+    "event": 255,
+    "raw": "05 00 01 01 00 07 ff",
+    "note": "Live status does not contain DPI values, brightness, colors, button mappings, or macros."
+  }
+}

@@ -1,0 +1,52 @@
+window.pulsar { background: #101213; color: #ededeb; font-family: 'Inter', 'Adwaita Sans', sans-serif; font-size: 14px; }
+.pulsar .sidebar { background: #191b1c; border-right: 1px solid #2c2e30; padding: 28px 14px 18px; }
+.pulsar .brand { color: #f5e629; font-size: 23px; font-weight: 900; letter-spacing: 4px; }
+.pulsar .eyebrow { color: #929798; font-size: 10px; font-weight: 700; letter-spacing: 2px; }
+.pulsar .nav-button { border: none; box-shadow: none; background: transparent; color: #adb1b2; padding: 15px; border-radius: 9px; }
+.pulsar .nav-button:hover { background: #25282a; color: #fff; }
+.pulsar .nav-button.active { background: #2b2d28; color: #f9e933; box-shadow: inset 3px 0 #f5e629; }
+.pulsar .topbar { background: #141617; border-bottom: 1px solid #2c2e30; padding: 14px 24px; }
+.pulsar .top-tab { border: none; box-shadow: none; background: transparent; color: #aeb2b3; padding: 10px 18px; border-radius: 6px; }
+.pulsar .top-tab.active { background: #24251c; color: #f7e62d; box-shadow: inset 0 -2px #f7e62d; }
+.pulsar .page { padding: 26px; }
+.pulsar .page-title { font-size: 28px; font-weight: 700; letter-spacing: -0.7px; }
+.pulsar .subtitle { color: #9bA0A1; font-size: 13px; }
+.pulsar .card { background: #1a1d1e; border: 1px solid #303335; border-radius: 12px; padding: 20px; }
+.pulsar .card-title { font-size: 17px; font-weight: 650; }
+.pulsar .muted { color: #92999b; }
+.pulsar .small { font-size: 12px; }
+.pulsar .accent-text { color: #f5e629; }
+.pulsar .badge { color: #b8bfba; background: #242a27; border: 1px solid #343f36; border-radius: 20px; padding: 6px 12px; font-size: 11px; }
+.pulsar .experimental { background: #302c1a; color: #dfcc82; border-color: #49412a; }
+.pulsar .footer { background: #17191a; border-top: 1px solid #303335; padding: 14px 22px; }
+.pulsar button { color: #e0e3e3; background: #232628; border: 1px solid #3a3e40; border-radius: 7px; box-shadow: none; padding: 9px 13px; }
+.pulsar button:hover { background: #303437; }
+.pulsar button:checked, .pulsar button.selected { color: #f7e72e; border-color: #f7e72e; background: #302f1b; }
+.pulsar button.primary { background: #f1df23; color: #161810; border-color: #f1df23; font-weight: 700; padding: 11px 22px; }
+.pulsar button.primary:hover { background: #fff143; }
+.pulsar button.flat { background: transparent; border-color: transparent; }
+.pulsar button.danger { color: #ee9390; }
+.pulsar button:disabled { opacity: 0.38; }
+.pulsar entry, .pulsar spinbutton, .pulsar dropdown > button { background: #121516; color: #eef0ed; border: 1px solid #3b4042; border-radius: 7px; min-height: 34px; }
+.pulsar entry { padding: 2px 10px; }
+.pulsar entry:focus-within { border-color: #d4c627; }
+.pulsar spinbutton entry { border: none; background: transparent; }
+.pulsar spinbutton button { border: none; background: transparent; padding: 2px 5px; }
+.pulsar scale { padding: 12px 2px; }
+.pulsar scale trough { background: #434748; min-height: 6px; border-radius: 8px; }
+.pulsar scale highlight { background: #f2e32b; border-radius: 8px; }
+.pulsar scale slider { background: #f0f0e8; border: 2px solid #161819; min-width: 17px; min-height: 17px; margin: -8px; border-radius: 50%; box-shadow: none; }
+.pulsar .stage-row { background: #16191a; border: 1px solid #303537; border-radius: 9px; padding: 10px 12px; }
+.pulsar .binding { padding: 11px 14px; }
+.pulsar .binding.active { border-color: #b9aa2b; background: #27271d; }
+.pulsar .message { color: #b8bebd; font-size: 12px; }
+.pulsar .message.error { color: #ff9b92; }
+.pulsar .message.success { color: #bad0a3; }
+.pulsar textview, .pulsar textview text { background: #121516; color: #d0d7d1; font-family: monospace; font-size: 12px; }
+.pulsar progressbar trough { background: #343839; min-height: 5px; border-radius: 4px; }
+.pulsar progressbar progress { background: #e4d52c; min-height: 5px; border-radius: 4px; }
+.pulsar .swatch { padding: 3px; min-height: 36px; }
+.pulsar .hotspot { min-width: 16px; min-height: 16px; padding: 5px; border-radius: 50%; font-weight: 700; }
+.pulsar checkbutton check:checked { background: #eddf2b; color: #131513; border-color: #eddf2b; }
+.pulsar popover contents { background: #26292b; color: #f1f1ed; }
+.pulsar .divider { background: #333638; min-height: 1px; }

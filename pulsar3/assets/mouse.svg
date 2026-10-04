@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="370" viewBox="0 0 280 370">
+<defs><linearGradient id="body" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#3b4042"/><stop offset=".55" stop-color="#23282b"/><stop offset="1" stop-color="#15191b"/></linearGradient><linearGradient id="key"><stop stop-color="#343a3d"/><stop offset="1" stop-color="#202528"/></linearGradient></defs>
+<ellipse cx="144" cy="328" rx="94" ry="21" fill="#0a0c0d" opacity=".7"/>
+<path d="M139 30 C80 30 53 62 48 128 L40 260 C37 326 89 350 140 350 C200 350 241 318 238 256 L230 129 C225 63 197 30 139 30Z" fill="url(#body)" stroke="#505859" stroke-width="1.5"/>
+<path d="M138 34 C84 35 59 66 55 126 L54 161 Q96 172 133 151Z" fill="url(#key)" stroke="#111718" stroke-width="2"/>
+<path d="M145 34 C198 35 221 68 225 128 L226 161 Q184 172 147 151Z" fill="url(#key)" stroke="#111718" stroke-width="2"/>
+<path d="M52 189 L45 230" stroke="#101415" stroke-width="12" stroke-linecap="round"/>
+<path d="M50 183 L45 212 M44 224 L42 250" stroke="#535b5e" stroke-width="7" stroke-linecap="round"/>
+<rect x="129" y="69" width="24" height="51" rx="11" fill="#0c1113" stroke="#747d7b"/>
+<path d="M134 79h14m-14 8h14m-14 8h14m-14 8h14m-14 8h14" stroke="#727c7c" stroke-width="2"/>
+<rect x="134" y="149" width="15" height="27" rx="6" fill="#0f1415" stroke="#646d68"/>
+<path d="M58 294 C89 352 198 359 223 292" fill="none" stroke="#eddf36" stroke-width="2" opacity=".7"/>
+<path d="M131 264 L143 240 L143 258 L153 254 L141 279 L141 261Z" fill="#dccc35" opacity=".9"/>
+<text x="140" y="304" text-anchor="middle" fill="#626b69" font-family="sans-serif" font-size="10" letter-spacing="4">HATOR</text>
+</svg>

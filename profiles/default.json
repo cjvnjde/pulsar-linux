@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "name": "HATOR application defaults (not a device backup)",
+  "polling_hz": 1000,
+  "dpi": [400, 800, 1000, 1200, 1600, 3200],
+  "lighting": {
+    "mode": "horse-race",
+    "brightness": 4,
+    "speed": 4,
+    "selected_color": 0,
+    "colors": ["#ff0000", "#0000ff", "#00ff00", "#ffff00", "#00ffff", "#ff00ff", "#ff8000", "#ffffff"]
+  },
+  "buttons": {
+    "left": "left", "right": "right", "middle": "middle",
+    "forward": "forward", "back": "back", "dpi": "dpi-cycle"
+  },
+  "macros": []
+}

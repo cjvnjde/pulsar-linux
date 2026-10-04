@@ -1,0 +1,23 @@
+{
+  "device": {
+    "sysfs": "/sys/bus/usb/devices/1-2.3",
+    "usb": "/dev/bus/usb/001/005",
+    "status_hidraw": "/dev/hidraw6",
+    "usb_id": "379a:3910",
+    "product": "Pulsar 3"
+  },
+  "report_descriptors": {
+    "0": "05 01 09 02 a1 01 09 01 a1 00 05 09 15 00 25 01 19 01 29 05 75 01 95 05 81 02 95 03 81 01 05 01 16 01 80 26 ff 7f 09 30 09 31 75 10 95 02 81 06 15 81 25 7f 09 38 75 08 95 01 81 06 05 0c 0a 38 02 95 01 81 06 c0 c0",
+    "1": "05 01 09 06 a1 01 85 01 05 07 19 e0 29 e7 15 00 25 01 95 08 75 01 81 02 95 01 75 08 81 01 95 06 75 08 26 ff 00 05 07 19 00 2a ff 00 81 00 c0 05 0c 09 01 a1 01 85 03 19 00 2a ff 02 15 01 26 ff 02 75 10 95 01 81 00 c0 05 01 09 80 a1 01 85 04 19 81 29 83 15 00 25 01 75 01 95 03 81 02 75 05 95 01 81 01 c0 06 03 ff 09 f0 a1 01 85 05 15 00 26 ff 00 09 f1 75 08 95 06 81 00 c0",
+    "2": "06 00 ff 0a 00 ff a1 01 15 00 26 ff 00 75 08 09 f2 95 40 91 00 09 f3 95 08 b1 00 c0"
+  },
+  "status": {
+    "polling_hz": 1000,
+    "dpi_stage": 2,
+    "lighting_mode": "off",
+    "lighting_speed": 4,
+    "event": 255,
+    "raw": "05 00 01 01 00 07 ff",
+    "note": "Live status does not contain DPI values, brightness, colors, button mappings, or macros."
+  }
+}
