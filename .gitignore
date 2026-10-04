@@ -8,3 +8,10 @@ research/strings.txt
 research/symbols.txt
 research/reference_macro.js
 history/
+
+# Local device settings and generated downloads
+profiles/
+dist/
+build/
+*.egg-info/
+.venv/

@@ -19,10 +19,10 @@ from .editor_model import (ACTION_LABELS, BUTTON_LABELS, KEY_NAMES, MODIFIERS, P
     new_macro, remove_macro)
 from .protocol import ACTIONS, BUTTONS, MODES, encode_macro, plan
 from .transport import discover
+from .paths import DEFAULT_PROFILE, ROOT, initial_profile, profiles_dir, working_profile
 
-ROOT = Path(__file__).resolve().parents[1]
 ASSETS = Path(__file__).with_name('assets')
-WORKING = ROOT / 'profiles/linux.json'
+WORKING = working_profile()
 PAGE_INFO = {
     'buttons': ('Button assignments', 'Make every click yours. Select a button to change its action.'),
     'dpi': ('Sensitivity', 'Dial in your movement with up to six DPI stages.'),
@@ -114,15 +114,17 @@ class Editor(Gtk.Application):
         super().__init__(application_id='local.hator.Pulsar3.Studio',
                          flags=Gio.ApplicationFlags.NON_UNIQUE if offline else Gio.ApplicationFlags.DEFAULT_FLAGS)
         self.connect('activate', self.activate)
-        self.profile_path = Path(profile_path) if profile_path else (WORKING if WORKING.exists() else ROOT/'profiles/default.json')
+        self.profile_path = Path(profile_path) if profile_path else initial_profile()
         self.startup_error = None
         try:
             config = json.loads(self.profile_path.read_text())
             plan(config)
         except (ValueError, KeyError, TypeError, OSError) as error:
             self.startup_error = f'Could not load the saved profile: {error}. Open a valid file to recover it.'
-            config = json.loads((ROOT/'profiles/default.json').read_text())
+            config = json.loads((DEFAULT_PROFILE).read_text())
             self.profile_path = None
+        if not profile_path:
+            self.profile_path = WORKING
         self.doc = ProfileDocument(config)
         self.offline = offline
         self.busy = False
@@ -633,7 +635,7 @@ class Editor(Gtk.Application):
         actions.append(button('Open JSON…',lambda _:self.guard_discard(lambda:self.file_dialog(False))))
         actions.append(button('Revert edits',lambda _:self.guard_discard(self.revert)))
         library=card('Local profiles','Open a profile to edit it. Applying is always a separate action.');content.append(library)
-        for path in sorted((ROOT/'profiles').glob('*.json')):
+        for path in [DEFAULT_PROFILE, *sorted(profiles_dir().glob('*.json'))]:
             try:
                 data=json.loads(path.read_text());title=data.get('name') or path.stem
                 description=f"{len(data['dpi'])} DPI stages · {data['polling_hz']} Hz · {EFFECT_LABELS.get(data['lighting']['mode'],data['lighting']['mode'])}"
@@ -718,6 +720,7 @@ class Editor(Gtk.Application):
     @staticmethod
     def write_profile(path,snapshot):
         path=Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
         with tempfile.NamedTemporaryFile(mode='w',dir=path.parent,prefix='.'+path.name+'.',delete=False) as f:
             temporary=Path(f.name);f.write(json.dumps(snapshot,indent=2)+'\n')
         try:temporary.replace(path)
@@ -726,7 +729,7 @@ class Editor(Gtk.Application):
     def save_profile(self):
         if self.raw_dirty:self.notify('Load the JSON changes into the editor first.',True);return
         # Keep the bundled defaults intact.
-        if not self.profile_path or self.profile_path==ROOT/'profiles/default.json':self.file_dialog(True);return
+        if not self.profile_path or self.profile_path==DEFAULT_PROFILE:self.file_dialog(True);return
         try:
             snapshot=self.doc.validated();self.write_profile(self.profile_path,snapshot);self.doc.mark_saved(snapshot)
             self.changed();self.notify(f'Profile saved · {self.profile_path.name}. Mouse settings were not changed.')
@@ -742,7 +745,8 @@ class Editor(Gtk.Application):
             action=Gtk.FileChooserAction.SAVE if save else Gtk.FileChooserAction.OPEN,
             accept_label='Save' if save else 'Open',cancel_label='Cancel')
         filt=Gtk.FileFilter();filt.set_name('JSON profiles');filt.add_pattern('*.json');dialog.add_filter(filt)
-        dialog.set_current_folder(Gio.File.new_for_path(str(ROOT/'profiles')))
+        profiles_dir().mkdir(parents=True, exist_ok=True)
+        dialog.set_current_folder(Gio.File.new_for_path(str(profiles_dir())))
         if save:dialog.set_current_name('pulsar-profile.json')
         def response(d,result):
             if result==Gtk.ResponseType.ACCEPT:
@@ -862,6 +866,10 @@ class Editor(Gtk.Application):
         except (ValueError,KeyError,TypeError,OSError) as error:self.notify(str(error),True)
 
 
-if __name__=='__main__':
+def main():
     offline='--offline' in sys.argv
-    sys.exit(Editor(offline=offline).run([a for a in sys.argv if a!='--offline']))
+    return Editor(offline=offline).run([a for a in sys.argv if a!='--offline'])
+
+
+if __name__=='__main__':
+    sys.exit(main())

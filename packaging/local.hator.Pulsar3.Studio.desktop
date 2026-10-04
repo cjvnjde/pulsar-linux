@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Pulsar 3 Studio
+Comment=Configure HATOR Pulsar 3 DPI, lighting, buttons and macros
+Exec=pulsar3-gui
+Icon=local.hator.Pulsar3.Studio
+Terminal=false
+Categories=Settings;HardwareSettings;
+Keywords=HATOR;Pulsar;mouse;DPI;RGB;macro;
+StartupNotify=true

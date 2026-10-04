@@ -4,7 +4,7 @@ from pulsar3.protocol import *
 ROOT=Path(__file__).resolve().parents[1]
 
 class ProtocolTests(unittest.TestCase):
-    def setUp(self): self.config=json.loads((ROOT/'profiles/default.json').read_text())
+    def setUp(self): self.config=json.loads((ROOT/'pulsar3/data/default.json').read_text())
     def test_original_machine_code_packets(self):
         fixtures=json.loads((ROOT/'research/reference-packets.json').read_text())
         generated={'sync':sync_packet(),'parameters0_profile0':parameter0(bytes(range(64)),0),

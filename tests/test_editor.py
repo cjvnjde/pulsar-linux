@@ -9,7 +9,7 @@ from pulsar3.recorder import Recording
 ROOT=Path(__file__).resolve().parents[1]
 
 class EditorModelTests(unittest.TestCase):
-    def setUp(self):self.config=json.loads((ROOT/'profiles/default.json').read_text())
+    def setUp(self):self.config=json.loads((ROOT/'pulsar3/data/default.json').read_text())
 
     def test_saved_and_applied_are_independent_snapshots(self):
         doc=ProfileDocument(self.config)

@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
 set -e
 cd -- "$(dirname -- "$(readlink -f -- "$0")")"
-exec /usr/bin/python -m pulsar3.gui "$@"
+if [[ -x /usr/bin/python3 ]]; then
+  exec /usr/bin/python3 -m pulsar3.gui "$@"
+else
+  exec /usr/bin/python -m pulsar3.gui "$@"
+fi

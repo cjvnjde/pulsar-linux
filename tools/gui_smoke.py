@@ -1,17 +1,22 @@
 """Offline GTK interaction checks. Never reads/writes the mouse or user profiles."""
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
 import traceback
 from unittest.mock import patch
-sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+if not os.environ.get('PULSAR_TEST_INSTALLED'):
+    sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
+test_state=tempfile.TemporaryDirectory(prefix='pulsar-gui-test-')
+os.environ['XDG_DATA_HOME']=str(Path(test_state.name)/'data')
+os.environ['XDG_STATE_HOME']=str(Path(test_state.name)/'state')
 import gi
 gi.require_version('Gtk','4.0')
 from gi.repository import Gtk,GLib
-from pulsar3.gui import Editor,ROOT
+from pulsar3.gui import Editor,ROOT,WORKING
 
-app=Editor(offline=True,profile_path=ROOT/'profiles/default.json')
+app=Editor(offline=True,profile_path=ROOT/'pulsar3/data/default.json')
 failed=[]
 
 def later(callback,delay=300):
@@ -23,6 +28,9 @@ def later(callback,delay=300):
     GLib.timeout_add(delay,run)
 
 def screenshot(name):
+    if os.environ.get('PULSAR_NO_SCREENSHOTS'):
+        print('Rendered',name,flush=True)
+        return
     paintable=Gtk.WidgetPaintable.new(app.window)
     snapshot=Gtk.Snapshot()
     paintable.snapshot(snapshot,app.window.get_width(),app.window.get_height())
@@ -66,12 +74,13 @@ def checks():
         assert json.loads(target.read_text())==app.config
     assert not app.apply_button.get_sensitive()
     # Failed submissions do not overwrite the saved working profile or applied state.
-    before=(ROOT/'profiles/linux.json').read_bytes()
+    app.write_profile(WORKING, app.doc.saved)
+    before=WORKING.read_bytes()
     app.offline=False
     def failed_task(command,callback):callback(1,'','Simulated USB interruption')
     app.doc.mark_applied(app.config)
     with patch.object(app,'run_task',failed_task):app.apply()
-    assert (ROOT/'profiles/linux.json').read_bytes()==before
+    assert WORKING.read_bytes()==before
     assert app.doc.applied is None and not app.ready
     assert 'Some settings may have been applied' in app.message.get_text()
     # Success updates the submitted snapshot, not arbitrary later edits.
@@ -101,4 +110,5 @@ def checks():
 
 app.connect('activate',lambda *_:later(checks,700))
 app.run(['gui-smoke'])
+test_state.cleanup()
 sys.exit(bool(failed))

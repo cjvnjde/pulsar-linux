@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import sys
 from .protocol import plan
+from .paths import history_dir
 from .transport import Mouse,discover
 
 def main(argv=None):
@@ -35,7 +36,7 @@ def main(argv=None):
     if args.command=='plan' or not args.commit:
         print(json.dumps({'writes_hardware':False,'packets':[p.as_dict() for p in packets]},indent=2));return 0
     # Validate every packet before opening the device; make a write journal first.
-    journal_dir=Path(__file__).resolve().parents[1]/'history';journal_dir.mkdir(exist_ok=True)
+    journal_dir=history_dir();journal_dir.mkdir(parents=True,exist_ok=True)
     stamp=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%S.%fZ')
     journal=journal_dir/(stamp+'.json')
     record={'profile':config,'sections':sections,'completed_packets':[],

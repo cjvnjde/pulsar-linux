@@ -1,0 +1,30 @@
+name: Bug report
+description: Report a problem with the configurator
+body:
+  - type: input
+    id: version
+    attributes:
+      label: App version or commit
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Linux distribution and desktop
+      placeholder: Ubuntu 24.04 / GNOME, Arch / Hyprland, etc.
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Mouse model and USB ID
+      placeholder: HATOR Pulsar 3, 379a:3910
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: What happened?
+      description: Include steps, expected behavior, and any error message. Remove private paths or macro contents you do not want to share.
+    validations:
+      required: true

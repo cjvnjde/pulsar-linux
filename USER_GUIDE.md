@@ -9,17 +9,17 @@ The configurator works directly over USB. It does not need Windows, Wine, a virt
 Run:
 
 ```bash
-/home/cjvnjde/Work/pulsar-linux/pulsar3-gui
+/path/to/pulsar-linux/pulsar3-gui
 ```
 
 Or:
 
 ```bash
-cd /home/cjvnjde/Work/pulsar-linux
+cd /path/to/pulsar-linux
 ./pulsar3-gui
 ```
 
-The application opens the last profile saved after a successful Apply action, `profiles/linux.json`. If that file does not exist, it opens `profiles/default.json`, which contains the Windows application's shipped defaults.
+The application opens `~/.local/share/pulsar3/profiles/linux.json` (or its `XDG_DATA_HOME` equivalent). If it is absent, an old checkout’s `profiles/linux.json` is used when present; otherwise the bundled `pulsar3/data/default.json` provides the original application’s defaults. New saves use the user-data directory.
 
 **Values in the editor come from a profile file. They are not a full reading of the settings currently inside the mouse.**
 
@@ -32,7 +32,7 @@ Linux allows ordinary mouse movement and clicks without granting an application 
 When the application reports a permission error:
 
 1. Connect the mouse.
-2. Click **Enable device access**.
+2. Click **Device → Enable device access**.
 3. Enter your password in the system authentication dialog.
 4. The application grants your user account access to this mouse's configuration and status device files, then reads its status.
 
@@ -52,9 +52,9 @@ No permanent udev rule or startup service has been installed. The tool does not 
 | Python 3 | Application and command-line tool |
 | PyGObject, GTK4 (4.10+), and libadwaita | Graphical interface |
 | `pkexec`, a graphical authentication agent, and `setfacl` | The **Enable device access** button |
-| A writable project directory | Saving the current profile and write history |
+| Writable user data/state directories | Saving profiles and write history without changing installed application files |
 
-These components are already available on your Omarchy installation. The command-line tool uses Python's standard library; the extraction and reverse-engineering tools are not runtime requirements.
+Install these dependencies through your Linux distribution; see the README for Arch/Omarchy and Ubuntu commands. The command-line tool uses Python's standard library; the extraction and reverse-engineering tools are not runtime requirements.
 
 The current tool expects exactly one matching mouse to be connected. Support for other HATOR models, multiple matching mice, Bluetooth, or wireless receivers has not been established.
 
@@ -82,7 +82,7 @@ The selected local profile and save/apply state remain visible. Editing a contro
 |---|---|
 | **Validate** | Validate the profile and build packets without hardware access |
 | **Save profile** | Write the current profile to its local file; bundled defaults prompt for a new filename |
-| **Apply to mouse** | Send the complete valid profile, then save the successfully submitted configuration to `profiles/linux.json` |
+| **Apply to mouse** | Send the complete valid profile, then save the successfully submitted configuration to `~/.local/share/pulsar3/profiles/linux.json` |
 
 **Save as** can duplicate a configuration under a new filename. **Open** only loads a file into the editor. **Revert edits** restores the last saved editor state. Closing or loading a different profile asks before discarding unsaved edits.
 
@@ -363,7 +363,7 @@ Profile files are local saved configurations. They are not complete backups read
 
 The app sends configuration commands rather than continuously implementing button actions in the background. It does not need to keep sending the profile after Apply, but retain the file so you can reapply it after reconnecting if needed.
 
-The GUI updates `profiles/linux.json` after a successful hardware transfer. Saving a file separately does not apply it, and a complete hardware readback is unavailable.
+The GUI updates `~/.local/share/pulsar3/profiles/linux.json` after a successful hardware transfer. Saving a file separately does not apply it, and a complete hardware readback is unavailable.
 
 ## 9. Live status and verification
 
@@ -388,7 +388,7 @@ Packet construction was checked against the Windows application, including 288 b
 Run commands from the project directory:
 
 ```bash
-cd /home/cjvnjde/Work/pulsar-linux
+cd /path/to/pulsar-linux
 ```
 
 | Command | Purpose |
@@ -396,9 +396,9 @@ cd /home/cjvnjde/Work/pulsar-linux
 | `python -m pulsar3 detect` | Identify the mouse and its current device paths |
 | `python -m pulsar3 status` | Read live status |
 | `python -m pulsar3 probe` | Read USB report descriptors and status |
-| `python -m pulsar3 plan profiles/linux.json` | Validate a profile and preview its packets |
-| `python -m pulsar3 apply profiles/linux.json` | Preview only; does not write settings |
-| `python -m pulsar3 apply profiles/linux.json --commit` | Apply the profile |
+| `python3 -m pulsar3 plan ~/.local/share/pulsar3/profiles/linux.json` | Validate a profile and preview its packets |
+| `python3 -m pulsar3 apply ~/.local/share/pulsar3/profiles/linux.json` | Preview only; does not write settings |
+| `python3 -m pulsar3 apply ~/.local/share/pulsar3/profiles/linux.json --commit` | Apply the profile |
 
 The same Linux device permissions are required for hardware access from the CLI. You can use **Enable device access** in the GUI first.
 
@@ -407,13 +407,13 @@ The same Linux device permissions are required for hardware access from the CLI.
 For example, write only DPI data:
 
 ```bash
-python -m pulsar3 apply profiles/linux.json --sections dpi --commit
+python3 -m pulsar3 apply ~/.local/share/pulsar3/profiles/linux.json --sections dpi --commit
 ```
 
 Or lighting-related groups:
 
 ```bash
-python -m pulsar3 apply profiles/linux.json --sections parameters,colors --commit
+python3 -m pulsar3 apply ~/.local/share/pulsar3/profiles/linux.json --sections parameters,colors --commit
 ```
 
 | Group | Fields written |
@@ -426,13 +426,13 @@ python -m pulsar3 apply profiles/linux.json --sections parameters,colors --commi
 
 These groups reflect the device's command format. `parameters` includes polling and stage count even if your intention is only to change lighting. The input file must still be a complete valid profile. Include `macros` when applying button bindings that reference macros.
 
-Write records in `history/` contain the requested profile, completed transfer groups, and available before/after status. They are diagnostic records, not full device backups or an automatic rollback mechanism.
+Write records in `~/.local/state/pulsar3/history/` contain the requested profile, completed transfer groups, and available before/after status. They are diagnostic records, not full device backups or an automatic rollback mechanism.
 
 ## 11. Troubleshooting
 
 | Problem | What to do |
 |---|---|
-| Permission denied | Click **Enable device access** and authenticate |
+| Permission denied | Click **Device → Enable device access** and authenticate |
 | Worked before unplugging, then stopped | Enable access again; USB and hidraw paths may have changed |
 | Mouse not found | Check the USB connection and that this is the `379a:3910` model |
 | More than one matching mouse found | Leave only one connected while configuring |
@@ -464,5 +464,5 @@ Some generic functions exist in the vendor application's shared code for other d
 
 - [README](README.md): quick start and development commands.
 - [Protocol notes](PROTOCOL.md): command formats and reverse-engineering evidence.
-- [Current GUI profile](profiles/linux.json): working profile; successful Apply saves here, and Save can also update this file.
-- [Original application defaults](profiles/default.json): shipped defaults, not a device backup.
+- Current GUI profile: `~/.local/share/pulsar3/profiles/linux.json` (respects `XDG_DATA_HOME`). Successful Apply saves here; Save can also update it.
+- [Original application defaults](pulsar3/data/default.json): shipped defaults, not a device backup.

@@ -1,164 +1,205 @@
-# HATOR Pulsar 3 on Linux
+# Pulsar 3 Studio for Linux
 
-For UI design scope and implementation readiness, see [UI_CAPABILITIES.md](UI_CAPABILITIES.md). For operating instructions, see [USER_GUIDE.md](USER_GUIDE.md).
+[![Build Linux downloads](https://github.com/cjvnjde/pulsar-linux/actions/workflows/build.yml/badge.svg)](https://github.com/cjvnjde/pulsar-linux/actions/workflows/build.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Native Python/GTK4 configurator for the **HATOR Pulsar 3, USB 379a:3910**.
-Reverse-engineered from the supplied `Pulsar 3 Software_20250227.exe`.
-It communicates directly with USB: no Windows, Wine, VM, or replacement firmware.
+A native Linux configurator for the **HATOR Pulsar 3 wired mouse, USB `379a:3910`**.
+Change DPI, polling rate, RGB lighting, button assignments, shortcuts, and macros
+through a GTK4 interface or command-line tool. No Windows, Wine, VM, or firmware
+replacement is needed.
 
-## Start
+This is an independent community project, not official HATOR software. Support for
+other HATOR models, wireless receivers, and Pulsar Gaming Gears mice is not established.
+
+[Download releases](https://github.com/cjvnjde/pulsar-linux/releases) ·
+[Latest build artifacts](https://github.com/cjvnjde/pulsar-linux/actions/workflows/build.yml) ·
+[User guide](USER_GUIDE.md) · [Capabilities](UI_CAPABILITIES.md) · [Protocol](PROTOCOL.md)
+
+## Features
+
+| Area | Controls |
+|---|---|
+| Buttons | Six-button mouse diagram, standard mouse/DPI/media actions, keyboard shortcuts, macro bindings, advanced action bytes |
+| Sensitivity | 1–6 stages, 200–12000 DPI in steps of 100, 125/250/500/1000 Hz polling |
+| Lighting | Off, static, breathing, neon, wave, press, chase; brightness/speed; eight RGB palette entries |
+| Macros | Twelve slots, event editor, focused keyboard recording, delays, repeat count, three playback modes, capacity validation |
+| Profiles | Named local files, open/save/save as, revert edits, Advanced JSON |
+| Linux access | Graphical password dialog for temporary device permissions; live status and connection errors |
+
+Editing and saving are separate from **Apply to mouse**. The app validates a complete
+profile before sending it and keeps at least one button assigned to left-click.
+
+## Download and run
+
+GitHub Actions builds two downloads and `SHA256SUMS` on pushes, pull requests, and
+manual runs. Open a successful run and download **pulsar3-studio-linux** from its
+Artifacts section. GitHub requires sign-in to download workflow artifacts; tagged
+builds are also published under Releases for easier public downloads.
+
+### Ubuntu 24.04 or newer / compatible Debian systems
+
+Download the `.deb` file, then install it with dependency resolution:
 
 ```sh
-cd /home/cjvnjde/Work/pulsar-linux
+sudo apt install ./pulsar3-studio_*_all.deb
+pulsar3-gui
+```
+
+The package installs a **Pulsar 3 Studio** entry in the application menu and a
+`pulsar3` CLI. GTK 4.10 or newer is required; older distribution releases may not
+meet this requirement.
+
+### Arch Linux / Omarchy and other Linux distributions
+
+Download and extract the `*-linux.tar.gz` archive. It contains the application,
+assets, defaults, and documentation. **Python and GTK are system dependencies;
+this archive is not a self-contained AppImage.**
+
+On Arch/Omarchy, install any missing dependencies:
+
+```sh
+sudo pacman -S --needed python python-gobject gtk4 libadwaita polkit acl
+```
+
+Then run the launcher from the extracted directory:
+
+```sh
 ./pulsar3-gui
 ```
 
-Python 3, PyGObject, GTK4 (4.10+), and libadwaita are already present on this machine. The CLI only
-needs Python's standard library. No reverse-engineering tools are required to run it.
+A graphical Polkit authentication agent must be running for the password dialog.
+Most desktop environments provide one. The application itself runs as your normal
+user; do not run the whole GUI with `sudo`.
 
-Click **Enable device access** if needed. The system password dialog grants your
-account access to this mouse's USB node and its status HID node. This is temporary;
-repeat after reconnecting the mouse. The application itself runs as your normal user.
-It never detaches the regular mouse/keyboard drivers.
-
-The controls edit a local profile. **Apply to mouse** writes it to the device.
-**Device → Refresh status** reports actual polling rate, active DPI stage, lighting mode and speed;
-it does not overwrite the profile editor.
-
-After a successful Apply, the GUI saves the submitted configuration to `profiles/linux.json`. **Save profile** writes a local file without changing the mouse. Failed transfers preserve the previous working file; they can still leave some device settings changed.
-The initial requested profile was 1000 Hz, DPI stages 400/800/1000/1200/1600/3200,
-lighting off, and standard buttons; subsequent GUI edits update that file.
-`default.json` contains
-values shipped with the Windows app; neither file is a backup of settings read
-from the mouse. The physical DPI button selects the active stage.
-
-## Verification and limits
-
-- Native status reads work on your connected device.
-- Changing polling to 500 Hz and lighting to static/slow, then restoring 1000 Hz
-  and lighting off/fast, was verified through live device responses.
-- The selected DPI values and standard button mappings were transmitted successfully.
-  Full configuration readback has not been established, so those settings are not
-  independently verified by reading their values from the device.
-- Packet builders match the original executable; 288 button conversions were
-  checked against its machine code, and 21 macro vectors against its embedded JS.
-- Macros and non-default button assignments are implemented but have not been
-  functionally exercised on this mouse. Test them in an appropriate application.
-- The old direct active-DPI command is ignored by this model; it is not exposed.
-- Persistence after unplugging has not been tested. Save profiles on disk so they
-  can be reapplied. Software profiles are not claimed to be independent onboard banks.
-- Firmware updates, full hardware backups, and settings the supplied app does not
-  expose (such as debounce or lift-off distance) are not implemented.
-
-## CLI
-
-From this directory:
+To check downloaded files before extracting/installing:
 
 ```sh
-python -m pulsar3 detect
-python -m pulsar3 status
-python -m pulsar3 probe
-python -m pulsar3 plan profiles/linux.json
-python -m pulsar3 apply profiles/linux.json --commit
+sha256sum -c SHA256SUMS
 ```
 
-`apply` without `--commit` only previews packets. All fields are validated before
-opening the device. Completed writes and before/after status are recorded in
-`history/`; this journal is **not a full device backup**.
-
-A selective write avoids replacing unrelated groups:
+### Run from source
 
 ```sh
-python -m pulsar3 apply profiles/linux.json --sections dpi --commit
-python -m pulsar3 apply profiles/linux.json --sections parameters,colors --commit
+git clone https://github.com/cjvnjde/pulsar-linux.git
+cd pulsar-linux
+./pulsar3-gui
 ```
 
-Groups: `parameters` (polling, DPI stage count, lighting mode/brightness/speed/color
-selection), `dpi`, `colors`, `buttons`, `macros`. These follow the original app's
-transaction grouping. Each profile must still contain all six physical button
-assignments. Macro bindings must have corresponding macro definitions.
+Dependencies: Python 3.10+, PyGObject, GTK 4.10+, libadwaita, `pkexec`, `setfacl`, and
+a graphical authentication agent. On Ubuntu 24.04:
 
-## Editing profiles
+```sh
+sudo apt install python3 python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 pkexec acl
+```
 
-The redesigned native GUI uses a dark theme with yellow accents:
-
-- **Buttons:** interactive mouse diagram, standard actions, media controls, keyboard
-  shortcuts with modifiers, macro bindings, and advanced action bytes.
-- **DPI & polling:** add/remove up to six stages, stepped sliders and numeric fields,
-  and 125–1000 Hz polling choices. The physical DPI button switches active stages.
-- **Lighting:** effect cards, brightness/speed sliders, eight color pickers and hex
-  fields, and palette selection.
-- **Macros:** twelve slots, editable press/release events, delays, repeat count,
-  reorder/delete, shortcut builder, duplication, and a 128-byte capacity meter.
-  **Record keyboard** captures keys only in its focused dialog; Escape stops recording.
-  Assign a macro and its playback mode on the Buttons page.
-- **Profiles:** name, open, save, save as, and revert edits. Files are local profiles,
-  not verified onboard banks.
-- **Device:** graphical access permission and live status refresh.
-- **Advanced:** JSON import/editing. Choose **Load JSON into editor** before Save/Apply.
-
-Editing does not write hardware. The footer distinguishes unsaved edits from settings
-sent to the mouse. Invalid macros are shown inline and cannot be saved/applied.
-Closing or loading another file asks before discarding unsaved edits.
-
-For an offline editor/preview (no device operations):
+For an offline editor, with all device operations disabled:
 
 ```sh
 ./pulsar3-gui --offline
 ```
 
-DPI: 1–6 stages, 200–12000 in steps of 100. Polling: 125/250/500/1000 Hz.
-Lighting: `off`, `static`, `breath`, `neon`, `wave`, `press`, `horse-race`.
-Brightness and speed: 0–4. Colors: eight `#RRGGBB` strings.
+## First configuration
 
-Button names: `left`, `right`, `middle`, `forward`, `back`, `dpi`.
-Named actions include these mouse buttons, `double-click`, `dpi-up`, `dpi-down`,
-`dpi-cycle`, `dpi-lock`, `disabled`, `media-player`, `next-track`, `previous-track`,
-`stop`, `mute`, `play-pause`, `volume-up`, and `volume-down`.
+1. Connect one supported mouse.
+2. Open **Device → Enable device access** and authenticate in the system dialog.
+3. Edit the profile. For a macro, create it on **Macros**, then assign it on **Buttons**.
+4. Click **Validate**, then **Apply to mouse**.
 
-A keyboard shortcut uses a USB HID keyboard usage and modifier bitmask. For Ctrl+C:
+Device access is temporary. Repeat after reconnecting or rebooting if needed. The
+app discovers USB paths automatically, claims only the configuration interface,
+and does not detach normal mouse/keyboard drivers.
 
-```json
-"back": {"key": 6, "modifiers": 1}
-```
+The physical DPI button switches stages. The old software-stage-selection command
+was ignored by the tested mouse and is not exposed as a working control.
 
-Modifier bits: left Ctrl=1, Shift=2, Alt=4, Super=8; right equivalents=16/32/64/128.
-A raw original-app action can be expressed as `{"ui_key": [type, byte1, byte2, byte3]}`;
-these are UI-format bytes, converted to the firmware format by the tool. At least
-one of the six physical buttons must remain assigned to ordinary left-click.
+## Profiles and history
 
-Example macro definition (inside `macros`) and binding:
+The application follows XDG directory settings:
 
-```json
-{
-  "slot": 4,
-  "repeat": 1,
-  "events": [
-    {"key": 4, "action": "down", "delay_ms": 50},
-    {"key": 4, "action": "up", "delay_ms": 10}
-  ]
-}
-```
+| Data | Default location |
+|---|---|
+| Saved profiles | `~/.local/share/pulsar3/profiles/` |
+| Last successfully submitted working profile | `~/.local/share/pulsar3/profiles/linux.json` |
+| Write journals | `~/.local/state/pulsar3/history/` |
+| Bundled defaults | `pulsar3/data/default.json` in the application |
 
-```json
-"back": {"macro": 4, "mode": "once"}
-```
+`XDG_DATA_HOME` and `XDG_STATE_HOME` override the first two base directories.
+Profiles can also be opened or saved at a location of your choice.
 
-That macro taps the USB key usage for A. Modes are `once`, `toggle`, `hold`.
-There are 12 macro slots (0–11), 128 bytes per macro including its header/terminator.
-Delays are in 10 ms increments; extended delays use 20 ms resolution, matching the
-original software. Every key-down must be paired with key-up; the last event uses
-10 ms. Macro mouse codes are 240–244. Macro uploads precede button assignments.
+Older checkouts with `profiles/linux.json` are read if no user-data working profile
+exists; subsequent saves go to user data. The legacy file is preserved. Personal
+profiles, write journals, and extracted vendor software are excluded from builds.
 
-## Development
+**Save profile** changes a local file only. After successful Apply, the app saves
+the submitted working profile. Failed transfers keep the previous working file but
+can leave some hardware settings changed. Journals are diagnostic records, not full
+hardware backups.
+
+## What is verified?
+
+- Native status and configuration communication work on a connected `379a:3910` mouse.
+- Polling/lighting changes were checked through a device-status round trip.
+- DPI and standard button settings were transmitted successfully.
+- Packet construction matches original executable fixtures, including 288 button
+  conversions and 21 macro vectors.
+- **Macro playback, alternative button actions, and every lighting animation still
+  need functional testing.** Their editors and encoders being implemented does not
+  prove all hardware behavior.
+
+Live readback includes polling rate, active DPI stage, lighting mode, and speed.
+It does not include DPI values, brightness, RGB values, assignments, or macros.
+Onboard profile banks and persistence of every setting after power loss are not
+verified. There is no firmware updater or complete device-backup reader.
+
+### Sniper action and DPI colors
+
+The original software calls one action **Sniper Key** (`dpi-lock` internally).
+It is intended as a precision/DPI action, but its exact hold/release behavior and
+target DPI have not been established. There is no verified separate sniper-DPI field.
+
+HATOR documents a scroll-wheel DPI indicator on the Pulsar 3. Whether the palette
+we currently write can customize each stage's indicator color still needs a hardware
+test; the UI does not promise independent per-DPI colors or per-LED addressing.
+See the [manufacturer's product description](https://www.hator.gg/mice/pulsar-3/).
+
+## CLI
+
+From a checkout or extracted archive:
 
 ```sh
-python -m unittest discover -s tests -v
-# With an accessible graphical session; never writes device settings:
-python tools/gui_smoke.py
+python3 -m pulsar3 detect
+python3 -m pulsar3 status
+python3 -m pulsar3 plan pulsar3/data/default.json
+python3 -m pulsar3 apply /path/to/profile.json --commit
 ```
 
-See `PROTOCOL.md` for packet formats and executable addresses. `research/` contains
-local proprietary extraction/decompilation artifacts for investigation, not a
-redistributable copy of the Windows application. Runtime code is in `pulsar3/`.
-The original installer and ZIP have not been modified.
+With the Debian package, use `pulsar3` instead of `python3 -m pulsar3`.
+`apply` without `--commit` previews packets without writing configuration.
+See the [user guide](USER_GUIDE.md) for selective writes and profile examples.
+
+## Development and releases
+
+```sh
+python3 -m unittest discover -s tests -v
+python3 tools/gui_smoke.py                 # requires a graphical session
+python3 tools/build_release.py            # writes dist/; standard library only
+```
+
+The GUI smoke test uses temporary user-data directories and simulated device results;
+it does not configure a connected mouse. CI installs the generated Debian package
+and runs this test under Xvfb against the installed code.
+
+The build script creates a Linux archive, architecture-independent Debian package,
+and SHA256 checksums from an explicit file list. No secrets or publishing credentials
+are required to run tests or produce artifacts.
+
+To publish a release, update `pulsar3.__version__`, commit it, and push a matching
+`vMAJOR.MINOR.PATCH` tag. The workflow tests/builds it and attaches downloads to a
+GitHub Release. Ordinary branch builds remain Actions artifacts for 30 days.
+
+## License and credits
+
+[MIT](LICENSE), copyright cjvnjde and contributors. This license covers this
+project's code and documentation, not HATOR's proprietary software or trademarks.
+The original Windows installer, extracted QML, and decompiled application are not
+distributed in releases. See [PROTOCOL.md](PROTOCOL.md) for reverse-engineering evidence.
