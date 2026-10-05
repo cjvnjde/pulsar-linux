@@ -14,7 +14,7 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
-from .editor_model import (ACTION_LABELS, BUTTON_LABELS, KEY_NAMES, MODIFIERS, PLAYBACK,
+from .editor_model import (ACTION_LABELS, BUTTON_LABELS, DPI_INDICATOR_COLORS, KEY_NAMES, MODIFIERS, PLAYBACK,
     ProfileDocument, action_label, append_tap, effective_delay, key_label, macro_bytes,
     new_macro, remove_macro)
 from .protocol import ACTIONS, BUTTONS, MODES, encode_macro, plan
@@ -296,21 +296,23 @@ class Editor(Gtk.Application):
         link = box(spacing=12)
         text = label('Link lighting color to DPI stage'); text.set_hexpand(True); link.append(text)
         self.dpi_link_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
-        self.dpi_link_switch.set_active(self.config.get('dpi_lighting', {}).get('enabled', False))
+        linked = self.config.get('dpi_lighting', {}).get('enabled', False)
+        self.dpi_link_switch.set_active(linked)
         self.dpi_link_switch.set_tooltip_text('Use the color beside each stage while this app is running')
         self.dpi_link_switch.connect('notify::active', self.toggle_dpi_lighting)
         link.append(self.dpi_link_switch); panel.append(link)
-        panel.append(label('Apply to start. Uses static lighting at your chosen brightness; keep the app open or minimized.', 'muted small', True))
+        panel.append(label('With linking off, swatches show the default DPI indicator colors from the mouse manual. Enable linking to customize, then Apply; keep the app open or minimized.', 'muted small', True))
         self.dpi_widgets = []
         self.dpi_color_pickers = []
-        stage_colors = self.config.get('dpi_lighting', {}).get('colors', self.config['lighting']['colors'])
+        stage_colors = self.config.get('dpi_lighting', {}).get('colors', DPI_INDICATOR_COLORS) if linked else DPI_INDICATOR_COLORS
         for index, value in enumerate(self.config['dpi']):
             row = box(spacing=14, css='stage-row')
             number = label(f'{index+1:02}', 'accent-text'); number.set_width_chars(2); row.append(number)
             rgba = Gdk.RGBA(); rgba.parse(stage_colors[index])
             picker = Gtk.ColorDialogButton.new(Gtk.ColorDialog(title=f'DPI stage {index+1} color', with_alpha=False))
             picker.set_rgba(rgba)
-            picker.set_tooltip_text(f'Stage {index+1} lighting color · {stage_colors[index]}')
+            picker.set_sensitive(linked)
+            picker.set_tooltip_text(f'Stage {index+1} ' + ('linked lighting color' if linked else 'default DPI indicator color') + f' · {stage_colors[index]}')
             picker.connect('notify::rgba', self.dpi_color_picked, index)
             row.append(picker); self.dpi_color_pickers.append(picker)
             name = label(f'Stage {index+1}'); name.set_size_request(70,-1); row.append(name)
@@ -324,7 +326,12 @@ class Editor(Gtk.Application):
             remove.set_sensitive(len(self.config['dpi'])>1); row.append(remove)
             adjustment.connect('value-changed', self.change_dpi, index)
             self.dpi_widgets.append(adjustment); panel.append(row)
-        panel.append(label('Use the mouse’s DPI button to switch active stages. These controls edit their sensitivity.', 'muted small', True))
+        panel.append(label('A button assigned to Cycle DPI stages switches active stages. These controls edit their sensitivity.', 'muted small', True))
+        binding = box(spacing=12)
+        self.dpi_button_label = label('DPI button: ' + action_label(self.config['buttons']['dpi']), 'muted small', True)
+        self.dpi_button_label.set_hexpand(True); binding.append(self.dpi_button_label)
+        binding.append(button('Edit DPI button', lambda _: (self.navigate('buttons'), self.choose_button('dpi'))))
+        panel.append(binding)
         self.dpi_follow_label = label('', 'muted small', True); panel.append(self.dpi_follow_label)
         self.update_follow_labels()
         rates = card('Polling rate', 'How often the mouse reports input to your computer.'); content.append(rates)
@@ -347,7 +354,7 @@ class Editor(Gtk.Application):
     def add_stage(self):
         if len(self.config['dpi']) < 6:
             if 'dpi_lighting' in self.config:
-                self.config['dpi_lighting']['colors'].append(self.config['lighting']['colors'][len(self.config['dpi'])])
+                self.config['dpi_lighting']['colors'].append(DPI_INDICATOR_COLORS[len(self.config['dpi'])])
             self.config['dpi'].append(min(12000,self.config['dpi'][-1]+400)); self.build_dpi(); self.changed()
 
     def remove_stage(self, index):
@@ -358,10 +365,11 @@ class Editor(Gtk.Application):
 
     def dpi_lighting_config(self):
         return self.config.setdefault('dpi_lighting', {'enabled': False,
-            'colors': self.config['lighting']['colors'][:len(self.config['dpi'])]})
+            'colors': list(DPI_INDICATOR_COLORS[:len(self.config['dpi'])])})
 
     def toggle_dpi_lighting(self, widget, *_):
         self.dpi_lighting_config()['enabled'] = widget.get_active()
+        self.build_dpi()
         self.changed()
 
     def dpi_color_picked(self, widget, _, index):
@@ -526,7 +534,7 @@ class Editor(Gtk.Application):
                 choice=dropdown([ACTION_LABELS[v] for v in values],values.index(current) if isinstance(current,str) and current in values else 0)
                 options.append(choice)
                 options.append(button('Assign action',lambda _:self.assign(name,values[choice.get_selected()]),'primary'))
-                if selected==0:options.append(label('The sniper action is experimental; a separate sniper DPI is not available.', 'muted small',True))
+                if selected==0:options.append(label('Hold the sniper action to lower DPI for slow, precise movement. A separate sniper DPI setting is not available.', 'muted small',True))
             elif selected==2:
                 current=self.config['buttons'][name]; current=current if isinstance(current,dict) and 'key' in current else {'key':6,'modifiers':1}
                 picker,values=key_picker(current['key']); options.append(field('Key',picker))
@@ -562,6 +570,7 @@ class Editor(Gtk.Application):
         try:plan(candidate)
         except (ValueError,KeyError,TypeError) as error:self.notify(str(error),True);return
         self.config['buttons'][name]=action
+        if name=='dpi':self.dpi_button_label.set_text('DPI button: ' + action_label(action))
         self.binding_rows[name][1].set_text(action_label(action));self.changed()
         self.notify(f'{BUTTON_LABELS[name]} assigned to {action_label(action)}. Apply to send it.')
 

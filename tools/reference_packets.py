@@ -41,13 +41,19 @@ if __name__=='__main__':
  out=ROOT/'research/reference-packets.json';out.write_text(json.dumps(vectors,indent=2)+'\n')
  for name,v in vectors.items():print(name,v['header'],len(bytes.fromhex(v['payload'])))
 
-def capture_keys(keys):
-    """Execute the original button conversion loop, stopping before transmission."""
+def convert_parameter1(payload):
+    """Execute the original conversion loop on a complete QML payload."""
     from unicorn.x86_const import UC_X86_REG_EBP,UC_X86_REG_ESI
-    if len(keys)!=16:raise ValueError('16 key entries required')
+    if len(payload)!=192:raise ValueError('192 UI bytes required')
     u=Uc(UC_ARCH_X86,UC_MODE_32);u.mem_map(0x400000,0x200000);u.mem_write(0x400000,PE.get_memory_mapped_image())
     u.mem_map(0x1000000,0x100000);bp=0x10f0000
     u.reg_write(UC_X86_REG_EBP,bp);u.reg_write(UC_X86_REG_ESP,bp-0x1000);u.reg_write(UC_X86_REG_ESI,0)
-    u.mem_write(bp-0xd8+128,bytes(v for key in keys for v in key))
+    u.mem_write(bp-0xd8,bytes(payload))
     u.emu_start(0x412de2,0x412e8e,count=10000)
-    return bytes(u.mem_read(bp-0xd8+128,64))
+    return bytes(u.mem_read(bp-0xd8,192))
+
+
+def capture_keys(keys):
+    """Execute the original button conversion loop, stopping before transmission."""
+    if len(keys)!=16:raise ValueError('16 key entries required')
+    return convert_parameter1(bytes(128)+bytes(v for key in keys for v in key))[128:]

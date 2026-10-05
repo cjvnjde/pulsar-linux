@@ -17,9 +17,12 @@ KEY_NAMES.update({58+i:f'F{i+1}' for i in range(12)})
 KEY_NAMES.update({104+i:f'F{i+13}' for i in range(12)})
 KEY_NAMES.update({89+i:f'Keypad {i+1}' for i in range(9)})
 MODIFIERS = [('Ctrl',1),('Shift',2),('Alt',4),('Super',8),('Right Ctrl',16),('Right Shift',32),('Right Alt',64),('Right Super',128)]
+# Wired HTM610/HTM611 manual, in stage order. These are independent of the
+# original application's eight-color effect palette.
+DPI_INDICATOR_COLORS = ('#ff0000', '#00ff00', '#0000ff', '#00ffff', '#ffff00', '#ff00ff')
 ACTION_LABELS = {'left':'Left click','right':'Right click','middle':'Wheel click','forward':'Forward',
     'back':'Back','double-click':'Double click','dpi-up':'DPI up','dpi-down':'DPI down',
-    'dpi-cycle':'Cycle DPI stages','dpi-lock':'Sniper action (experimental)','disabled':'Disabled',
+    'dpi-cycle':'Cycle DPI stages','dpi-lock':'Sniper action (hold for low DPI)','disabled':'Disabled',
     'media-player':'Open media player','next-track':'Next track','previous-track':'Previous track',
     'stop':'Stop playback','mute':'Mute','play-pause':'Play / pause','volume-up':'Volume up','volume-down':'Volume down'}
 BUTTON_LABELS = dict(zip(BUTTONS,('Left button','Right button','Wheel click','Forward button','Back button','DPI button')))

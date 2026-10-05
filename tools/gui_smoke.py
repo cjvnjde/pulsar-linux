@@ -53,11 +53,20 @@ def next_page():
 
 def checks():
     # Shared DPI adjustment, bounds, stage count, rate and color state.
+    default_dpi_colors=['#ff0000','#00ff00','#0000ff','#00ffff','#ffff00','#ff00ff']
+    def picker_color(picker):
+        rgba=picker.get_rgba()
+        return '#'+''.join(f'{round(v*255):02x}' for v in (rgba.red,rgba.green,rgba.blue))
+    assert not app.dpi_link_switch.get_active()
+    assert not any(p.get_sensitive() for p in app.dpi_color_pickers)
+    assert [picker_color(p) for p in app.dpi_color_pickers]==default_dpi_colors
     app.dpi_widgets[0].set_value(850)
     assert app.config['dpi'][0]==800
     app.remove_stage(5);app.add_stage();assert len(app.config['dpi'])==6
     app.dpi_link_switch.set_active(True)
     assert app.config['dpi_lighting']['enabled']
+    assert all(p.get_sensitive() for p in app.dpi_color_pickers)
+    assert app.config['dpi_lighting']['colors']==default_dpi_colors
     from gi.repository import Gdk
     rgba=Gdk.RGBA();rgba.parse('#123456');app.dpi_color_pickers[1].set_rgba(rgba)
     assert app.config['dpi_lighting']['colors'][1]=='#123456'
@@ -103,6 +112,16 @@ def checks():
     app.follower.configure.assert_called_with(app.doc.applied)
     app.dpi_link_switch.set_active(False)
     assert app.doc.applied['dpi_lighting']['enabled']  # unsent edits do not stop linking
+    assert [picker_color(p) for p in app.dpi_color_pickers]==default_dpi_colors
+    assert not any(p.get_sensitive() for p in app.dpi_color_pickers)
+    assert app.config['dpi_lighting']['colors'][0]=='#123456'
+    app.dpi_link_switch.set_active(True)
+    assert picker_color(app.dpi_color_pickers[0])=='#123456'
+    app.dpi_link_switch.set_active(False)
+    app.assign('dpi','dpi-lock')
+    assert 'hold for low DPI' in app.dpi_button_label.get_text()
+    app.assign('dpi','dpi-cycle')
+    assert 'Cycle DPI stages' in app.dpi_button_label.get_text()
     app.follower.revision=10
     app.follow_update(9,{'error':'stale error'})
     assert app.ready

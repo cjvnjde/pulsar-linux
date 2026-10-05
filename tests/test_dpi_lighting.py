@@ -34,22 +34,24 @@ class DpiLightingTests(unittest.TestCase):
         original = deepcopy(self.profile)
         session = DpiLightingSession(self.profile)
         self.profile['dpi_lighting']['colors'][1] = '#abcdef'
-        parameters, colors = session.packets(self.status)
+        parameters, = session.setup_packets(self.status)
+        colors, = session.packets(self.status)
         self.assertEqual(colors.header[1], 3)
         self.assertEqual(colors.header[6], 2)  # colors only, no DPI/buttons
-        self.assertEqual(colors.payload[88:91], bytes.fromhex('00ff00'))
+        self.assertEqual(colors.payload[88:112], bytes.fromhex('00ff00') * 8)
         self.assertEqual(parameters.header[1], 2)
         self.assertEqual(parameters.payload[:6], bytes([
             POLLING[original['polling_hz']], 3, MODES['static'],
             original['lighting']['brightness'] * 63, SPEEDS[original['lighting']['speed']], 0]))
         self.assertEqual(self.profile['lighting'], original['lighting'])
         session.sent(2)
+        self.assertEqual(session.setup_packets(self.status), [])
         self.assertEqual(session.packets(self.status), [])
         switched = session.packets(dict(self.status, dpi_stage=3))
         self.assertEqual(len(switched), 1)
         self.assertEqual(switched[0].header[1], 3)
         self.assertEqual(switched[0].header[6], 2)
-        self.assertEqual(switched[0].payload[88:91], bytes.fromhex('0000ff'))
+        self.assertEqual(switched[0].payload[88:112], bytes.fromhex('0000ff') * 8)
 
     def test_invalid_stage_or_external_parameter_change_never_writes(self):
         session = DpiLightingSession(self.profile)
@@ -74,7 +76,7 @@ class DpiLightingTests(unittest.TestCase):
             # to follow changes, nor use the DPI/button mask bits in Parameter 1.
             self.assertEqual(packets[0].header[1], 3)
             self.assertEqual(packets[0].header[6], 2)
-            self.assertEqual(packets[0].payload[88:91], bytes.fromhex(session.colors[stage-1][1:]))
+            self.assertEqual(packets[0].payload[88:112], bytes.fromhex(session.colors[stage-1][1:]) * 8)
             session.sent(stage)
         session.colors[2] = '#0000FF'
         self.assertEqual(session.packets(dict(self.status, dpi_stage=3)), [])
@@ -104,6 +106,53 @@ class DpiLightingTests(unittest.TestCase):
         self.assertEqual(updates.call_args.args[1]['color'], '#ff0000')
         follower.configure(); follower.poll_once()
         self.assertEqual(mouse.send.call_count, 3)
+
+    def test_setup_reset_uses_fresh_stage_before_writing_color(self):
+        follower, mouse, updates = self.follower()
+        status = dict(self.status, dpi_stage=3, lighting_mode='breath')
+        mouse.status.side_effect = lambda: status.copy()
+
+        def firmware_send(packet):
+            if packet.header[1] == 2:
+                status.update(dpi_stage=2, lighting_mode='static')
+            else:
+                self.assertEqual(packet.header[6], 2)
+                self.assertEqual(packet.payload[88:112], bytes.fromhex('00ff00') * 8)
+
+        mouse.send.side_effect = firmware_send
+        follower.poll_once()
+        self.assertEqual(mouse.status.call_count, 2)
+        self.assertEqual(mouse.send.call_count, 2)
+        self.assertEqual(updates.call_args.args[1]['stage'], 2)
+        self.assertEqual(updates.call_args.args[1]['status']['dpi_stage'], 2)
+        self.assertEqual(updates.call_args.args[1]['color'], '#00ff00')
+        follower.poll_once()
+        self.assertEqual(mouse.send.call_count, 2)
+
+    def test_setup_rejected_or_second_status_failed_never_writes_a_color(self):
+        for after in (dict(self.status, lighting_mode='breath'), OSError('Mouse disconnected')):
+            with self.subTest(after=after):
+                follower, mouse, updates = self.follower()
+                mouse.status.side_effect = [self.status, after]
+                follower.poll_once()
+                self.assertEqual(mouse.send.call_count, 1)
+                self.assertEqual(mouse.send.call_args.args[0].header[1], 2)
+                self.assertIn('error', updates.call_args.args[1])
+                follower.poll_once()
+                self.assertEqual(mouse.status.call_count, 2)
+
+    def test_pausing_after_setup_prevents_stale_color_write(self):
+        follower, mouse, _ = self.follower()
+
+        def read_status():
+            if mouse.status.call_count == 2:
+                follower.pause()
+            return self.status
+
+        mouse.status.side_effect = read_status
+        follower.poll_once()
+        self.assertEqual(mouse.send.call_count, 1)
+        self.assertEqual(mouse.send.call_args.args[0].header[1], 2)
 
     def test_disconnect_and_partial_write_failure_disarm_until_reapplied(self):
         for fail_at in ('status', 'second_write'):

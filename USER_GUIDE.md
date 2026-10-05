@@ -129,9 +129,12 @@ Any of the six buttons can be reassigned. The validator requires at least one ph
 | `dpi-up` | Move up through configured DPI stages |
 | `dpi-down` | Move down through configured DPI stages |
 | `dpi-cycle` | Cycle through the configured stages |
-| `dpi-lock` | The original application's **Sniper Key** action; exact hold/release behavior and target DPI have not been verified |
+| `dpi-lock` | **Sniper Key**: lowers sensitivity while the assigned button is pressed, confirmed by the user's mouse test; exact target DPI is unmeasured |
 
-The `dpi-lock` name is a label in our current tool, not a promise that it permanently locks DPI. There is no separate sniper-DPI setting in the interface.
+There is no separate sniper-DPI setting in the interface. Assigning Sniper action
+to the DPI button replaces stage cycling with low sensitivity while pressed. The
+DPI page shows that button's current profile assignment; **Edit DPI button** opens
+its editor, where **Cycle DPI stages** restores normal stage switching after Apply.
 
 ### Media actions
 
@@ -219,6 +222,28 @@ The live-status report exposes the stage number, not its actual DPI value. The o
 
 Polling rate controls how frequently the mouse reports input. DPI controls movement sensitivity. Linux pointer speed and acceleration are separate desktop settings; this application does not change them.
 
+### Check actual sensor DPI
+
+The DPI packet encoding matches the original Windows executable, including tests
+with all stages at 200 DPI and changing only the highest stage. Values are absolute
+numbers; they are not scaled against the maximum configured stage. This does not
+prove the sensor accepted a particular setting, because DPI values are absent from
+device status.
+
+For a measured check from a source checkout, run:
+
+```sh
+sudo python3 tools/measure_dpi.py --distance-cm 5
+```
+
+Root access lets this diagnostic read the mouse's pointing HID node, which is
+separate from the configuration/status access granted by the app. It reads only
+mouse motion and changes no settings. Select a stage, position the mouse against
+a ruler, and follow the prompt to make one straight horizontal 5 cm pass. Keep
+it still afterward; do not return it to the start until the result is printed.
+Repeat at the lowest and highest stages. `measured_dpi` uses raw sensor counts
+before desktop acceleration; accuracy depends on the measured travel distance.
+
 ## 6. Lighting
 
 ### Available modes
@@ -254,6 +279,12 @@ Index `0` is the first color. Eight palette entries do **not** mean eight indepe
 
 ### Link lighting to DPI stages
 
+With linking off, the disabled stage swatches show the default indicator sequence
+listed in the [wired Pulsar 3 manual](https://downloads.hator.com/wp-content/uploads/instructions/hator-mice-manual/HATOR_Pulsar%203_HTM610_HTM611_manual.pdf):
+red, green, blue, cyan, yellow, purple. They do not use the Lighting effect palette,
+and they are a reference rather than a readback of the LEDs. Enable linking to edit
+custom stage colors; previously saved custom colors are retained while it is off.
+
 1. Open **DPI & polling** and turn on **Link lighting color to DPI stage**.
 2. Click the color swatch beside each stage and choose its RGB color.
 3. Set a visible **Brightness** on Lighting (zero keeps the LEDs dark).
@@ -263,11 +294,21 @@ This feature uses **static lighting** and the profile’s brightness while enabl
 
 The Linux app follows the reported stage about every 0.5 seconds. It must remain open; minimizing is fine. Closing stops following and leaves the last color set. Restarting requires Apply again. There is no startup service or verified onboard custom DPI-color association.
 
-The follower uses the last successfully applied profile. Editing colors, opening another profile, or saving does not change that active mapping until Apply. Removing a stage also removes its assigned color; adding one uses the corresponding normal palette color as its starting value.
+The follower uses the last successfully applied profile. Editing colors, opening
+another profile, or saving does not change that active mapping until Apply.
+Removing a stage also removes its assigned color; new mappings and added stages
+use the manual's default indicator colors as their starting values.
 
 Access errors, disconnects, invalid stages, and unexpected polling/lighting settings stop following. Reconnect or fix access, refresh status if needed, then Apply to restart. This avoids automatically writing an old profile to a newly connected mouse. Apply and status commands pause the follower and share device access with it.
 
-Colors cannot be read back: the displayed color is the requested value, not a measurement of the LEDs. After establishing static lighting, the app updates only RGB palette data on stage changes. It does not repeatedly write unchanged colors or resend DPI values, polling rate, buttons, or macros. Individual automatic color changes are not added to the full-profile Apply journal.
+Colors cannot be read back: the displayed linked color is the requested value,
+not a measurement of the LEDs. After establishing static lighting, the app reads
+the active stage again because that setup write can reset it. It fills all eight
+RGB palette slots with the active color to avoid unrelated palette colors appearing
+while linked. Subsequent stage changes update only RGB palette data. It does not
+repeatedly write unchanged colors or resend DPI values, polling rate, buttons, or
+macros. Individual automatic color changes are not added to the full-profile Apply
+journal.
 
 Profiles optionally store the mapping as follows (one color per entry in `dpi`):
 

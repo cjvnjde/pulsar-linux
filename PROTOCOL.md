@@ -83,8 +83,44 @@ All fields not listed are zero, as in the original app.
 Physical buttons are the first six entries: left, right, middle, forward, back,
 DPI. Remaining records match the shipped configuration. The original UI presents
 six DPI stages, though the protocol block reserves eight. This tool respects the
-model's six-stage UI limit. Independent DPI measurement/button event validation
-has not yet been performed; do not label successful USB writes as full readback.
+model's six-stage UI limit. Exact sensor DPI and every button action are not fully
+validated; do not label successful USB writes as full readback.
+
+DPI encoding audit on 2026-10-05: `tools/reference_dpi.py` extracts
+`DpiSetting.saveData` and `main.o_saveData1` directly from the original executable,
+evaluates those functions, and runs the original button conversion loop and
+Parameter 1 machine code in Unicorn, stopping before USB I/O. All 192 payload
+bytes and the feature header match the Linux planner in twelve cases recorded in
+`research/reference-dpi.json`, including all-200 stages, a last stage of 3200,
+and 400/800/1500/3000/6000/12000. DPI values are absolute little-endian uint16
+numbers for both axes. Changing the highest stage does not rescale other stages.
+The legacy sensor-specific one-byte encodings in `0x410290` are not called by this
+Parameter 1 path.
+
+This checks the original application's encoding, not the sensor's acceptance of
+those values. The user reported similar movement across several stages despite
+successful transfers. `tools/measure_dpi.py` can measure raw horizontal motion
+over a known distance through the verified pointing HID descriptor. It reads only
+interface 0, never keyboard reports, and changes no configuration. Ruler accuracy
+and keeping the same stage during the measurement determine the result's accuracy.
+
+Live motion check on 2026-10-05, run by the agent with the user making nominal
+5 cm horizontal passes: DPI-only writes at 400 and 3200 produced 927 and 7033
+horizontal counts (7.59x); the full Apply sequence produced 948 and 6820 counts
+(7.19x). Temporary test values were restored to the applied six-stage profile
+400/800/1500/3000/6000/12000. Physical button cycling with that mixed profile
+then produced 872 counts at reported stage 1 (about 443 DPI) and 17179 counts at
+reported stage 6 (about 8727 DPI). Stage numbers were unchanged during each pass.
+One timed trial had no motion reports and was discarded; the mixed-stage tests
+were repeated with recording explicitly stopped after the user finished moving.
+
+These measurements establish a substantial sensor response to the DPI writes
+through both Apply paths and physical stage cycling. They do not establish exact
+12000-DPI accuracy or explain the reported intermittent cursor behavior. The
+highest-stage result fell below its configured target, and nominal ruler travel
+has measurement uncertainty. No guessed multiplier or alternative legacy
+encoding was introduced. Further controlled high-end measurement is needed
+before changing the original-compatible encoding.
 
 Button conversion was verified by executing the original loop at 0x412de2 through
 0x412e8e for 288 inputs. Fixtures: `research/reference-keys.json`.
@@ -131,10 +167,13 @@ unchanged, and no new firmware opcode or onboard association is assumed.
 
 At startup after Apply, the follower establishes static mode and selected-color
 index 0 using Parameter 0, preserving polling rate, stage count, brightness and
-speed from the applied snapshot. It then writes the active stage’s RGB value
-into palette slot 0 using Parameter 1 with **mask 2 only**. Subsequent stage
-changes use only this palette command. The other seven palette entries retain
-their normal profile values. An unchanged color causes no configuration write.
+speed from the applied snapshot. Because this setup can reset the active stage,
+it reads status again before choosing the stage color. It then writes that RGB
+value into all eight palette slots using Parameter 1 with **mask 2 only**, so
+palette lookups cannot display unrelated colors while linking is active.
+Subsequent stage changes use only this palette command. The normal palette is
+preserved in the user's profile and restored by disabling linking and applying.
+An unchanged color causes no configuration write.
 DPI values, button assignments and macros are never sent by the follower.
 
 Hardware check on 2026-10-04: sending Parameter 0 on every color change caused
@@ -143,6 +182,13 @@ allowed the physical button to cycle through all six stages without that reset.
 The user confirmed visible color changes. Keep Parameter 0 out of the stage-change
 path; even an otherwise identical parameters write has this firmware side effect.
 Full Apply (including the initial lighting setup) can still reset the active stage.
+
+Regression checks simulate a stage-3 to stage-2 reset during lighting setup and
+verify that the first color write and UI status both use stage 2. The revised
+all-slot palette behavior still needs a visible check on the user's mouse; RGB
+values cannot be read back. The UI's default unlinked swatches follow the
+[wired HTM610/HTM611 manual](https://downloads.hator.com/wp-content/uploads/instructions/hator-mice-manual/HATOR_Pulsar%203_HTM610_HTM611_manual.pdf)
+(red, green, blue, cyan, yellow, purple), rather than the Windows effect palette.
 
 The worker shares a transaction lock with GUI Apply/status/access operations,
 releases interface 2 between polls, and ignores stale profile revisions. Device

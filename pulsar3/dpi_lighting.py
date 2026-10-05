@@ -24,21 +24,30 @@ class DpiLightingSession:
         lighting['mode'] = 'static'
         lighting['selected_color'] = 0
 
-    def packets(self, status):
+    def _validate(self, status, check_lighting=True):
         stage = integer(status.get('dpi_stage'), 1, len(self.colors), 'Active DPI stage')
         if status.get('polling_hz') != self.profile['polling_hz']:
             raise RuntimeError('Polling rate changed outside this profile. Apply the profile again to resume DPI colors.')
-        if self.last_stage is not None and (status.get('lighting_mode') != 'static' or
+        if check_lighting and (status.get('lighting_mode') != 'static' or
                 status.get('lighting_speed') != self.profile['lighting']['speed']):
             raise RuntimeError('Lighting settings changed or were not accepted. Apply the profile again to resume DPI colors.')
+        return stage
+
+    def setup_packets(self, status):
+        self._validate(status, check_lighting=False)
+        # Parameter 0 resets the active DPI stage on tested hardware. The worker
+        # must read status again after this write, before choosing a color.
+        return plan(self.profile, {'parameters'}) if self.last_stage is None else []
+
+    def packets(self, status):
+        stage = self._validate(status)
         if self.last_stage is not None and self.colors[stage - 1].lower() == self.colors[self.last_stage - 1].lower():
             return []
-        self.profile['lighting']['colors'][0] = self.colors[stage - 1]
-        # Parameter 0 resets the active DPI stage on tested hardware. Establish
-        # static mode/slot 0 once after Apply; stage changes use only mask 2.
+        # A single-slot update leaves other palette lookups showing unrelated
+        # colors. Give every slot the active color while linking is enabled.
+        self.profile['lighting']['colors'] = [self.colors[stage - 1]] * 8
         # The reserved DPI/button bytes in Parameter 1 are never applied.
-        packets = plan(self.profile, {'parameters'}) if self.last_stage is None else []
-        return packets + plan(self.profile, {'colors'})
+        return plan(self.profile, {'colors'})
 
     def sent(self, stage):
         # Call only after every packet succeeded. On failure the worker disarms.
@@ -103,6 +112,13 @@ class DpiLightingFollower:
             try:
                 with self.mouse_factory() as mouse:
                     status = mouse.status()
+                    setup = session.setup_packets(status)
+                    if not self._current(revision):
+                        return
+                    for packet in setup:
+                        mouse.send(packet)
+                    if setup:
+                        status = mouse.status()
                     packets = session.packets(status)
                     if not self._current(revision):
                         return
@@ -110,7 +126,7 @@ class DpiLightingFollower:
                         mouse.send(packet)
                     session.sent(status['dpi_stage'])
                 update = {'status': status, 'stage': status['dpi_stage'],
-                          'color': session.colors[status['dpi_stage'] - 1], 'written': bool(packets)}
+                          'color': session.colors[status['dpi_stage'] - 1], 'written': bool(setup or packets)}
             except (OSError, RuntimeError, ValueError) as error:
                 with self._state_lock:
                     if revision != self._revision:

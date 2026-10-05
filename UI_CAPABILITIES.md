@@ -51,7 +51,7 @@ The current validator requires **at least one physical button assigned to ordina
 | Mouse | Left, right, middle, forward, back | Encoding implemented; standard configuration has been sent successfully |
 | Mouse | Double-click/double-fire | Implemented, testing needed |
 | DPI | Up, down, cycle | Implemented; physical stage changes have been observed, individual alternative assignments need testing |
-| DPI | Sniper action | Implemented, exact behavior needs testing; backend name is `dpi-lock` |
+| DPI | Sniper action | User confirmed low sensitivity while pressed; exact target DPI is unmeasured; backend name is `dpi-lock` |
 | Keyboard | A key plus optional Ctrl, Shift, Alt, Super modifiers | Implemented, testing needed |
 | Media | Play/pause, stop, next, previous, mute, volume up/down, media player | Implemented, testing needed; Linux application handling also matters |
 | Macro | Select a macro and playback mode | Implemented, testing needed |
@@ -59,7 +59,10 @@ The current validator requires **at least one physical button assigned to ordina
 
 A friendly key/shortcut picker is **implemented** over the existing JSON capability. The backend expects USB HID keyboard usages, not characters or Linux keycodes. Include left/right modifier distinctions in an advanced view if needed. Keyboard layout can affect the resulting character.
 
-Do not describe the sniper action as a verified temporary switch to a configurable DPI: neither its exact behavior nor a separate sniper-DPI parameter is established.
+Describe Sniper action as lowering sensitivity while pressed, based on the user's
+mouse test. Do not promise a configurable or measured target DPI: a separate
+sniper-DPI parameter is not established. Show the DPI button's profile assignment
+on the DPI page so assigning Sniper action there is not mistaken for stage cycling.
 
 Launching a Linux application or shell command is not a known onboard action. It could be offered later through a desktop shortcut or a background helper, which would be a separate Linux integration.
 
@@ -96,6 +99,12 @@ Display palette positions as 1â€“8 if desired and convert to backend indices 0â€
 Eight colors are a palette, **not eight independently addressable lighting zones**. Avoid a mouse illustration with eight independently editable LEDs.
 
 DPI linking starts only after a successful GUI Apply. It monitors the active stage about twice per second and selects a static color at the applied brightness. The normal lighting configuration remains in the profile and is restored by disabling linking and applying. Closing the app leaves the last color; reconnects/errors stop following until another Apply. Draft edits never modify the running mapping. This does not establish a native onboard DPI-color association, and RGB values still cannot be read back.
+
+Unlinked stage swatches are disabled and show the manual's default indicator
+sequence (red, green, blue, cyan, yellow, purple), separately from the effect
+palette. Linked swatches edit the saved custom mapping. Lighting setup is followed
+by a fresh stage read before sending color data; all eight palette slots receive
+the active color while linked, and later stage changes never resend Parameter 0.
 
 The exact relationship between each effect, speed, brightness, and palette has not been fully characterized. Until tested, do not invent effect-specific restrictions or promise an exact animated preview. A preview can be labeled illustrative.
 

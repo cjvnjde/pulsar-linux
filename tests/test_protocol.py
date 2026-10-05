@@ -23,6 +23,13 @@ class ProtocolTests(unittest.TestCase):
     def test_original_qml_macro_vectors(self):
         for v in json.loads((ROOT/"research/reference-macros.json").read_text()):
             self.assertEqual(encode_macro(v["spec"]).hex(),v["wire"])
+    def test_dpi_packets_match_original_embedded_qml_and_machine_code(self):
+        fixtures=json.loads((ROOT/'research/reference-dpi.json').read_text())
+        for vector in fixtures['vectors']:
+            with self.subTest(name=vector['name'],sections=vector['sections']):
+                packet,=plan(vector['config'],vector['sections'])
+                self.assertEqual(packet.header.hex(),vector['header'])
+                self.assertEqual(packet.payload.hex(),vector['payload'])
     def test_default_dpi_layout_and_selective_mask(self):
         packets=plan(self.config,['dpi']);self.assertEqual(len(packets),1)
         p=packets[0];self.assertEqual(p.header[6],1)
