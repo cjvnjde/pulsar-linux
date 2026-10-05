@@ -87,7 +87,7 @@ sudo pacman -S --needed python python-gobject gtk4 libadwaita polkit acl
 On Fedora:
 
 ```sh
-sudo dnf install python3 python3-gobject gtk4 libadwaita polkit acl
+sudo dnf install python3 python3-gobject gobject-introspection gtk4 libadwaita polkit acl
 ```
 
 Then run the launcher from the extracted directory:
