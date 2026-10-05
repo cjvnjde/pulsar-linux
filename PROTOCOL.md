@@ -214,3 +214,9 @@ performs its setup once, and skips RGB writes while the reported stage is outsid
 the applied mapping. It keeps polling and resumes at a configured stage without
 wrapping the number or guessing a color. Regression tests cover this transition
 for one-, two-, and three-stage profiles, including returning to the same color.
+
+Live three-stage check on 2026-10-05: while the user pressed the physical DPI
+button six times, a status-only capture recorded `1 → 2 → 3 → 1 → 2 → 3 → 1`.
+The saved profile had DPI values 1200/3200/600. No configuration was written by
+the capture, and the final stage was 1. This confirms three-stage cycling on the
+mouse; it does not read back the stage DPI values or wheel RGB colors.
