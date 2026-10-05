@@ -20,8 +20,8 @@ other HATOR models, wireless receivers, and Pulsar Gaming Gears mice is not esta
 | Area | Controls |
 |---|---|
 | Buttons | Six-button mouse diagram, standard mouse/DPI/media actions, keyboard shortcuts, macro bindings, advanced action bytes |
-| Sensitivity | 1–6 stages, 200–12000 DPI in steps of 100, 125/250/500/1000 Hz polling |
-| Lighting | Off, static, breathing, neon, wave, press, chase; brightness/speed; eight RGB palette entries; automatic color per DPI stage while the app runs |
+| Sensitivity | 1–6 reorderable stages, 200–12000 DPI in steps of 100, 125/250/500/1000 Hz polling; separate built-in wheel-color reference |
+| Lighting | Bottom RGB effects, brightness/speed, eight palette entries; optional bottom color per DPI stage while the app runs |
 | Macros | Twelve slots, event editor, focused keyboard recording, delays, repeat count, three playback modes, capacity validation |
 | Profiles | Named local files, open/save/save as, revert edits, Advanced JSON |
 | Linux access | Graphical password dialog for temporary device permissions; live status and connection errors |
@@ -59,7 +59,7 @@ manual runs. Open a successful run and download **pulsar3-studio-linux** from it
 Artifacts section. GitHub requires sign-in to download workflow artifacts; tagged
 builds are also published under Releases for easier public downloads.
 
-### Ubuntu 24.04 or newer / compatible Debian systems
+### Ubuntu 22.04 or newer / Debian 12 or newer
 
 Download the `.deb` file, then install it with dependency resolution:
 
@@ -69,19 +69,25 @@ pulsar3-gui
 ```
 
 The package installs a **Pulsar 3 Studio** entry in the application menu and a
-`pulsar3` CLI. GTK 4.10 or newer is required; older distribution releases may not
+`pulsar3` CLI. GTK 4.6 or newer is required; older distribution releases may not
 meet this requirement.
 
-### Arch Linux / Omarchy and other Linux distributions
+### Arch Linux, Fedora, and other Linux distributions
 
 Download and extract the `*-linux.tar.gz` archive. It contains the application,
 assets, defaults, and documentation. **Python and GTK are system dependencies;
 this archive is not a self-contained AppImage.**
 
-On Arch/Omarchy, install any missing dependencies:
+On Arch Linux, install any missing dependencies:
 
 ```sh
 sudo pacman -S --needed python python-gobject gtk4 libadwaita polkit acl
+```
+
+On Fedora:
+
+```sh
+sudo dnf install python3 python3-gobject gtk4 libadwaita polkit acl
 ```
 
 Then run the launcher from the extracted directory:
@@ -93,6 +99,12 @@ Then run the launcher from the extracted directory:
 A graphical Polkit authentication agent must be running for the password dialog.
 Most desktop environments provide one. The application itself runs as your normal
 user; do not run the whole GUI with `sudo`.
+
+The app uses standard GTK, XDG paths, and Linux USB interfaces. It works with X11
+and Wayland and has no dependency on Omarchy or Hyprland. Other distributions can
+use the same archive with the runtime dependencies below. GTK 4.6–4.8 uses the
+older GTK color and confirmation dialogs; newer GTK uses the current dialogs.
+CI exercises Ubuntu 22.04, Debian 12, Fedora 44, and the Ubuntu 24.04 packages.
 
 To check downloaded files before extracting/installing:
 
@@ -108,8 +120,8 @@ cd pulsar-linux
 ./pulsar3-gui
 ```
 
-Dependencies: Python 3.10+, PyGObject, GTK 4.10+, libadwaita, `pkexec`, `setfacl`, and
-a graphical authentication agent. On Ubuntu 24.04:
+Dependencies: Python 3.10+, PyGObject, GTK 4.6+, libadwaita, `pkexec`, `setfacl`, and
+a graphical authentication agent. On Ubuntu or Debian:
 
 ```sh
 sudo apt install python3 python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 pkexec acl
@@ -135,18 +147,27 @@ and does not detach normal mouse/keyboard drivers.
 The physical DPI button switches stages. The old software-stage-selection command
 was ignored by the tested mouse and is not exposed as a working control.
 
-### Color per DPI stage
+### Wheel indicator and bottom RGB colors
 
-On **DPI & polling**, enable **Link lighting color to DPI stage**, choose the swatch
-beside each stage, then **Apply to mouse**. Pressing the DPI button changes the
-lighting to that stage’s color, using static lighting and the profile’s brightness.
-The app checks the active stage about twice per second.
+The scroll wheel has a separate, built-in DPI indicator. Its stage colors follow
+the [wired Pulsar 3 manual](https://downloads.hator.com/wp-content/uploads/instructions/hator-mice-manual/HATOR_Pulsar%203_HTM610_HTM611_manual.pdf):
+red, green, blue, cyan, yellow, purple. The DPI page shows these as a reference
+beside the numbered slots. A supported command for customizing the wheel's
+palette has not been established; the bottom RGB palette does not control it.
 
-With linking off, stage swatches show the default DPI indicator sequence from the
-[wired Pulsar 3 manual](https://downloads.hator.com/wp-content/uploads/instructions/hator-mice-manual/HATOR_Pulsar%203_HTM610_HTM611_manual.pdf):
-red, green, blue, cyan, yellow, purple. These are separate from the effect palette
-on Lighting. Enable linking to edit the stage colors. The DPI page also shows the
-DPI button's assignment; use **Cycle DPI stages** for normal stage switching.
+For the bottom lighting, enable **Link bottom RGB lighting to DPI stage**, choose
+the custom color swatches, then **Apply to mouse**. The app follows the active
+stage about twice per second and changes the bottom RGB to that static color at
+the profile's brightness. Saved custom bottom colors remain visible while linking
+is off, with editing disabled. The wheel can still show blue even when none of
+your custom bottom colors are blue.
+
+Use the **↑ / ↓** buttons to reorder stages. DPI values and custom bottom colors
+move together; wheel colors remain attached to the numbered slots. Profiles can
+contain just one, two, or three stages. If the mouse temporarily reports a removed
+stage, bottom linking waits for a configured stage and resumes automatically
+instead of rejecting the profile or repeatedly resetting lighting. The DPI page
+also shows the DPI button's assignment; use **Cycle DPI stages** for stage cycling.
 
 Keep the app open or minimized. Closing it stops automatic changes and leaves the
 last color set; after restarting, Apply again to resume. To restore your normal
@@ -182,12 +203,14 @@ hardware backups.
 
 - Native status and configuration communication work on a connected `379a:3910` mouse.
 - Polling/lighting changes were checked through a device-status round trip.
-- DPI-linked colors were checked with the physical DPI button through all six stages; the user confirmed visible color changes.
+- Bottom DPI-linked colors were checked with the physical DPI button through all
+  six stages. The user clarified that these affect the bottom lighting, while the
+  wheel retains its separate built-in indicator colors.
 - DPI and standard button settings were transmitted successfully.
 - The user tested Sniper action: holding the assigned button lowers sensitivity
   for slow, precise movement; the exact target DPI remains unmeasured.
 - Packet construction matches original executable fixtures, including 288 button
-  conversions, 21 macro vectors, and 12 complete DPI packets generated by the
+  conversions, 21 macro vectors, and 18 complete DPI packets generated by the
   original embedded QML and machine code. DPI values are absolute. Live raw-motion
   measurements confirmed substantial sensitivity changes, but the 12000-DPI
   estimate fell below its target; exact high-DPI accuracy remains unresolved.
@@ -207,9 +230,9 @@ The user confirmed that it lowers sensitivity while pressed. Its target DPI has
 not been measured, and there is no verified separate sniper-DPI field. Assigning
 this action to the DPI button replaces that button's normal stage cycling.
 
-HATOR documents a scroll-wheel DPI indicator on the Pulsar 3. Custom linked colors
-use the app's follower, which fills the effect palette with the active stage's color.
-Independent onboard DPI colors and per-LED addressing remain unverified.
+HATOR documents a scroll-wheel DPI indicator on the Pulsar 3. Custom bottom colors
+use the app's follower, which fills the bottom effect palette with the active
+stage's color. Custom wheel colors and per-LED addressing remain unsupported.
 
 ## CLI
 

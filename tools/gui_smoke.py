@@ -60,6 +60,9 @@ def checks():
     assert not app.dpi_link_switch.get_active()
     assert not any(p.get_sensitive() for p in app.dpi_color_pickers)
     assert [picker_color(p) for p in app.dpi_color_pickers]==default_dpi_colors
+    assert [w.get_text() for w in app.dpi_wheel_labels]==['● '+c+' wheel' for c in ('Red','Green','Blue','Cyan','Yellow','Purple')]
+    assert not app.dpi_move_buttons[0][0].get_sensitive()
+    assert not app.dpi_move_buttons[-1][1].get_sensitive()
     app.dpi_widgets[0].set_value(850)
     assert app.config['dpi'][0]==800
     app.remove_stage(5);app.add_stage();assert len(app.config['dpi'])==6
@@ -70,6 +73,14 @@ def checks():
     from gi.repository import Gdk
     rgba=Gdk.RGBA();rgba.parse('#123456');app.dpi_color_pickers[1].set_rgba(rgba)
     assert app.config['dpi_lighting']['colors'][1]=='#123456'
+    before_dpi=app.config['dpi'][:];before_colors=app.config['dpi_lighting']['colors'][:]
+    app.dpi_move_buttons[1][0].emit('clicked')
+    assert app.config['dpi'][0]==before_dpi[1]
+    assert app.config['dpi_lighting']['colors'][0]=='#123456'
+    assert app.dpi_wheel_labels[0].get_text()=='● Red wheel'
+    assert picker_color(app.dpi_color_pickers[0])=='#123456'
+    app.dpi_move_buttons[0][1].emit('clicked')
+    assert app.config['dpi']==before_dpi and app.config['dpi_lighting']['colors']==before_colors
     app.remove_stage(0)
     assert app.config['dpi_lighting']['colors'][0]=='#123456'
     app.add_stage();assert len(app.config['dpi_lighting']['colors'])==len(app.config['dpi'])
@@ -112,7 +123,8 @@ def checks():
     app.follower.configure.assert_called_with(app.doc.applied)
     app.dpi_link_switch.set_active(False)
     assert app.doc.applied['dpi_lighting']['enabled']  # unsent edits do not stop linking
-    assert [picker_color(p) for p in app.dpi_color_pickers]==default_dpi_colors
+    assert picker_color(app.dpi_color_pickers[0])=='#123456'
+    assert app.dpi_wheel_labels[0].get_text()=='● Red wheel'
     assert not any(p.get_sensitive() for p in app.dpi_color_pickers)
     assert app.config['dpi_lighting']['colors'][0]=='#123456'
     app.dpi_link_switch.set_active(True)
@@ -126,11 +138,25 @@ def checks():
     app.follow_update(9,{'error':'stale error'})
     assert app.ready
     app.follow_update(10,{'status':status,'stage':2,'color':'#123456'})
-    assert 'Stage 2 → #123456' in app.dpi_follow_label.get_text()
+    assert 'Stage 2 → bottom RGB #123456' in app.dpi_follow_label.get_text()
     assert 'Editor changes take effect after Apply' in app.dpi_follow_label.get_text()
+    app.follow_update(10,{'status':dict(status,dpi_stage=6),'stage':6,'color':None,'waiting_for_stage':True,'stage_count':3})
+    assert app.ready
+    assert 'outside this 3-stage profile' in app.dpi_follow_label.get_text()
     with patch.object(app,'run_task',successful_task), patch.object(app,'write_profile'):
         app.apply()
     assert not app.follower.configure.call_args.args[0]['dpi_lighting']['enabled']
+    # Exercise the actual GTK 4.6 fallback controls even on newer GTK.
+    from pulsar3.gtk_compat import color_picker, confirm
+    legacy=color_picker('Legacy color','#ff0000',legacy=True)
+    changed=Mock();legacy.connect('notify::rgba',changed)
+    legacy.set_rgba(rgba)
+    assert picker_color(legacy)=='#123456' and changed.called
+    accepted=Mock()
+    dialog=confirm(app.window,'Discard edits?','Fallback dialog','Discard',accepted,legacy=True)
+    dialog.response(Gtk.ResponseType.CANCEL);accepted.assert_not_called()
+    dialog=confirm(app.window,'Discard edits?','Fallback dialog','Discard',accepted,legacy=True)
+    dialog.response(Gtk.ResponseType.ACCEPT);accepted.assert_called_once()
     # Recorder controls and capture handlers must work without global hooks.
     from pulsar3.recorder import RecorderDialog
     from gi.repository import Gdk

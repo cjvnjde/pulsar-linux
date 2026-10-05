@@ -50,11 +50,11 @@ No permanent udev rule or startup service has been installed. The tool does not 
 |---|---|
 | Linux and a USB connection to this mouse | Direct hardware communication |
 | Python 3 | Application and command-line tool |
-| PyGObject, GTK4 (4.10+), and libadwaita | Graphical interface |
+| PyGObject, GTK4 (4.6+), and libadwaita | Graphical interface on X11 or Wayland |
 | `pkexec`, a graphical authentication agent, and `setfacl` | The **Enable device access** button |
 | Writable user data/state directories | Saving profiles and write history without changing installed application files |
 
-Install these dependencies through your Linux distribution; see the README for Arch/Omarchy and Ubuntu commands. The command-line tool uses Python's standard library; the extraction and reverse-engineering tools are not runtime requirements.
+Install these dependencies through your Linux distribution; see the README for Arch, Fedora, Ubuntu, and Debian commands. Omarchy and Hyprland are not required. The command-line tool uses Python's standard library; the extraction and reverse-engineering tools are not runtime requirements.
 
 The current tool expects exactly one matching mouse to be connected. Support for other HATOR models, multiple matching mice, Bluetooth, or wireless receivers has not been established.
 
@@ -67,7 +67,7 @@ The dark interface uses a sidebar for **Buttons**, **DPI & polling**, **Lighting
 | Page | Controls |
 |---|---|
 | Buttons | Click the mouse diagram or a button row, select an action category, configure the action, and click **Assign** |
-| DPI & polling | Add/remove stages, edit stepped sliders or numeric values, select polling rate, link a color to each stage |
+| DPI & polling | Add/remove/reorder stages, edit DPI values, select polling rate, see wheel-color references, link a bottom RGB color to each stage |
 | Lighting | Choose an effect, brightness and speed, edit eight RGB swatches with color pickers or hex fields, select the active palette color |
 | Macros | Create/duplicate/delete macros, edit/reorder events, add shortcuts, record keyboard input, and inspect validation/capacity |
 | Profiles | Profile name, Save, Save as, Open JSON, Revert edits, and local profile list |
@@ -207,6 +207,16 @@ Use **Add stage**, the minus buttons, and each stage’s slider or numeric field
 400, 800, 1000, 1200, 1600, 3200
 ```
 
+Use **↑ / ↓** to change the cycle order. Each DPI value moves with its custom
+bottom color; the wheel's built-in colors belong to the numbered slots. All
+stage counts from one through six are valid, including two- and three-stage
+profiles. Apply after changing the count or order.
+
+Firmware may retain a removed stage after reducing the count. The app shows that
+reported number and waits for a configured stage without stopping bottom-color
+linking or repeatedly writing lighting setup. Linking resumes automatically when
+the mouse reports a stage in the applied profile.
+
 The physical button assigned to `dpi-cycle` selects the active stage. With the example above, stage 2 corresponds to 800 DPI **if this profile has been applied**.
 
 The live-status report exposes the stage number, not its actual DPI value. The old direct active-stage command found in the Windows program was ignored by this mouse, so the GUI does not offer a software “select active stage” control.
@@ -277,20 +287,21 @@ Example palette:
 
 Index `0` is the first color. Eight palette entries do **not** mean eight independently controllable physical lighting zones. Which colors and controls affect the display depends on the selected effect; the GUI does not offer individual LED addressing.
 
-### Link lighting to DPI stages
+### Wheel indicator and bottom RGB linking
 
-With linking off, the disabled stage swatches show the default indicator sequence
+Each numbered stage shows the built-in wheel indicator sequence
 listed in the [wired Pulsar 3 manual](https://downloads.hator.com/wp-content/uploads/instructions/hator-mice-manual/HATOR_Pulsar%203_HTM610_HTM611_manual.pdf):
-red, green, blue, cyan, yellow, purple. They do not use the Lighting effect palette,
-and they are a reference rather than a readback of the LEDs. Enable linking to edit
-custom stage colors; previously saved custom colors are retained while it is off.
+red, green, blue, cyan, yellow, purple. These labels are a reference rather than
+a readback of the LEDs. Custom wheel colors are unsupported: the existing RGB
+commands affect the bottom lighting. The wheel can show blue at stage 3 even if
+the custom bottom palette contains no blue.
 
-1. Open **DPI & polling** and turn on **Link lighting color to DPI stage**.
-2. Click the color swatch beside each stage and choose its RGB color.
+1. Open **DPI & polling** and turn on **Link bottom RGB lighting to DPI stage**.
+2. Click the custom bottom-color swatch beside each stage and choose its RGB color.
 3. Set a visible **Brightness** on Lighting (zero keeps the LEDs dark).
 4. Click **Apply to mouse**, then use the physical DPI button. The status beneath the stages shows the applied profile, active stage, and color sent.
 
-This feature uses **static lighting** and the profile’s brightness while enabled. Your ordinary lighting effect and eight-color palette remain saved in the profile. Disable linking and Apply to restore them.
+This feature uses **static bottom lighting** and the profile’s brightness while enabled. The wheel remains independent. Your ordinary bottom effect and eight-color palette remain saved in the profile. Disable linking and Apply to restore them. Saved custom bottom colors remain visible, with editing disabled, while linking is off.
 
 The Linux app follows the reported stage about every 0.5 seconds. It must remain open; minimizing is fine. Closing stops following and leaves the last color set. Restarting requires Apply again. There is no startup service or verified onboard custom DPI-color association.
 
@@ -299,7 +310,7 @@ another profile, or saving does not change that active mapping until Apply.
 Removing a stage also removes its assigned color; new mappings and added stages
 use the manual's default indicator colors as their starting values.
 
-Access errors, disconnects, invalid stages, and unexpected polling/lighting settings stop following. Reconnect or fix access, refresh status if needed, then Apply to restart. This avoids automatically writing an old profile to a newly connected mouse. Apply and status commands pause the follower and share device access with it.
+Access errors, disconnects, malformed stage reports, and unexpected polling/lighting settings stop following. A reported hardware stage outside a shortened profile only pauses color writes until a configured stage is active. Reconnect or fix access, refresh status if needed, then Apply to restart after an error. This avoids automatically writing an old profile to a newly connected mouse. Apply and status commands pause the follower and share device access with it.
 
 Colors cannot be read back: the displayed linked color is the requested value,
 not a measurement of the LEDs. After establishing static lighting, the app reads

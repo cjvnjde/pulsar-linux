@@ -14,9 +14,11 @@ gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
 
-from .editor_model import (ACTION_LABELS, BUTTON_LABELS, DPI_INDICATOR_COLORS, KEY_NAMES, MODIFIERS, PLAYBACK,
+from .editor_model import (ACTION_LABELS, BUTTON_LABELS, DPI_INDICATOR_COLORS, DPI_INDICATOR_NAMES, KEY_NAMES, MODIFIERS, PLAYBACK,
     ProfileDocument, action_label, append_tap, effective_delay, key_label, macro_bytes,
-    new_macro, remove_macro)
+    move_dpi_stage, new_macro, remove_macro)
+from .desktop import device_access_command
+from .gtk_compat import color_picker, confirm
 from .protocol import ACTIONS, BUTTONS, MODES, encode_macro, plan
 from .dpi_lighting import DpiLightingFollower
 from .transport import discover
@@ -294,39 +296,51 @@ class Editor(Gtk.Application):
         add = button('+ Add stage', lambda _: self.add_stage(), 'primary'); add.set_sensitive(len(self.config['dpi'])<6); heading.append(add)
         panel.append(heading)
         link = box(spacing=12)
-        text = label('Link lighting color to DPI stage'); text.set_hexpand(True); link.append(text)
+        text = label('Link bottom RGB lighting to DPI stage'); text.set_hexpand(True); link.append(text)
         self.dpi_link_switch = Gtk.Switch(valign=Gtk.Align.CENTER)
         linked = self.config.get('dpi_lighting', {}).get('enabled', False)
         self.dpi_link_switch.set_active(linked)
-        self.dpi_link_switch.set_tooltip_text('Use the color beside each stage while this app is running')
+        self.dpi_link_switch.set_tooltip_text('Change the bottom lighting with each stage while this app is running')
         self.dpi_link_switch.connect('notify::active', self.toggle_dpi_lighting)
         link.append(self.dpi_link_switch); panel.append(link)
-        panel.append(label('With linking off, swatches show the default DPI indicator colors from the mouse manual. Enable linking to customize, then Apply; keep the app open or minimized.', 'muted small', True))
+        panel.append(label('The scroll wheel uses its built-in stage colors, shown beside each stage. Custom colors affect only the bottom RGB lighting. Enable linking, then Apply and keep the app open.', 'muted small', True))
         self.dpi_widgets = []
         self.dpi_color_pickers = []
-        stage_colors = self.config.get('dpi_lighting', {}).get('colors', DPI_INDICATOR_COLORS) if linked else DPI_INDICATOR_COLORS
+        self.dpi_wheel_labels = []
+        self.dpi_move_buttons = []
+        stage_colors = self.config.get('dpi_lighting', {}).get('colors', DPI_INDICATOR_COLORS)
         for index, value in enumerate(self.config['dpi']):
             row = box(spacing=14, css='stage-row')
             number = label(f'{index+1:02}', 'accent-text'); number.set_width_chars(2); row.append(number)
-            rgba = Gdk.RGBA(); rgba.parse(stage_colors[index])
-            picker = Gtk.ColorDialogButton.new(Gtk.ColorDialog(title=f'DPI stage {index+1} color', with_alpha=False))
-            picker.set_rgba(rgba)
+            name = box(True, 3)
+            name.append(label(f'Stage {index+1}'))
+            wheel = label('', 'small')
+            wheel.set_markup(f'<span foreground="{DPI_INDICATOR_COLORS[index]}">●</span> {DPI_INDICATOR_NAMES[index]} wheel')
+            wheel.set_tooltip_text('Built-in wheel indicator color from the mouse manual; not editable or read back')
+            self.dpi_wheel_labels.append(wheel); name.append(wheel); row.append(name)
+            picker = color_picker(f'Stage {index+1} bottom RGB color', stage_colors[index])
             picker.set_sensitive(linked)
-            picker.set_tooltip_text(f'Stage {index+1} ' + ('linked lighting color' if linked else 'default DPI indicator color') + f' · {stage_colors[index]}')
+            picker.set_tooltip_text(f'Stage {index+1} bottom RGB color · {stage_colors[index]}')
             picker.connect('notify::rgba', self.dpi_color_picked, index)
-            row.append(picker); self.dpi_color_pickers.append(picker)
-            name = label(f'Stage {index+1}'); name.set_size_request(70,-1); row.append(name)
+            bottom = box(True, 3)
+            bottom.append(label('Bottom RGB', 'muted small')); bottom.append(picker)
+            row.append(bottom); self.dpi_color_pickers.append(picker)
             adjustment = Gtk.Adjustment(value=value, lower=200, upper=12000, step_increment=100, page_increment=500)
             scale = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=adjustment, digits=0, draw_value=False)
             scale.set_hexpand(True); row.append(scale)
             entry = Gtk.SpinButton(adjustment=adjustment, climb_rate=100, digits=0)
             entry.set_numeric(True); entry.set_snap_to_ticks(True); entry.set_width_chars(5); row.append(entry)
             row.append(label('DPI', 'muted small'))
+            order = box(spacing=3, css='stage-order')
+            up = button('↑', lambda _, i=index: self.move_stage(i, i-1), 'flat', 'Move this stage earlier')
+            down = button('↓', lambda _, i=index: self.move_stage(i, i+1), 'flat', 'Move this stage later')
+            up.set_sensitive(index > 0); down.set_sensitive(index < len(self.config['dpi'])-1)
+            self.dpi_move_buttons.append((up, down)); order.append(up); order.append(down); row.append(order)
             remove = button('−', lambda _, i=index: self.remove_stage(i), 'flat', 'Remove this stage')
             remove.set_sensitive(len(self.config['dpi'])>1); row.append(remove)
             adjustment.connect('value-changed', self.change_dpi, index)
             self.dpi_widgets.append(adjustment); panel.append(row)
-        panel.append(label('A button assigned to Cycle DPI stages switches active stages. These controls edit their sensitivity.', 'muted small', True))
+        panel.append(label('Use ↑ and ↓ to change the cycle order. DPI values and custom bottom colors move together; wheel colors belong to the numbered slots. Apply to send changes.', 'muted small', True))
         binding = box(spacing=12)
         self.dpi_button_label = label('DPI button: ' + action_label(self.config['buttons']['dpi']), 'muted small', True)
         self.dpi_button_label.set_hexpand(True); binding.append(self.dpi_button_label)
@@ -363,6 +377,11 @@ class Editor(Gtk.Application):
                 del self.config['dpi_lighting']['colors'][index]
             del self.config['dpi'][index]; self.build_dpi(); self.changed()
 
+    def move_stage(self, source, destination):
+        if 0 <= destination < len(self.config['dpi']):
+            move_dpi_stage(self.config, source, destination)
+            self.build_dpi(); self.changed()
+
     def dpi_lighting_config(self):
         return self.config.setdefault('dpi_lighting', {'enabled': False,
             'colors': list(DPI_INDICATOR_COLORS[:len(self.config['dpi'])])})
@@ -376,12 +395,12 @@ class Editor(Gtk.Application):
         rgba = widget.get_rgba()
         color = '#' + ''.join(f'{round(x*255):02x}' for x in (rgba.red, rgba.green, rgba.blue))
         self.dpi_lighting_config()['colors'][index] = color
-        widget.set_tooltip_text(f'Stage {index+1} lighting color · {color}')
+        widget.set_tooltip_text(f'Stage {index+1} bottom RGB color · {color}')
         self.changed()
 
     def update_follow_labels(self):
-        text = self.follow_message or ('Apply this profile to start following DPI changes.'
-            if self.config.get('dpi_lighting', {}).get('enabled') else 'DPI color linking is off in this profile.')
+        text = self.follow_message or ('Apply this profile to start linking bottom RGB colors.'
+            if self.config.get('dpi_lighting', {}).get('enabled') else 'Bottom RGB linking is off. The wheel indicator works independently.')
         if self.follow_message and self.doc.pending:
             text += ' Editor changes take effect after Apply.'
         if self.config.get('dpi_lighting', {}).get('enabled') and self.config['lighting']['brightness'] == 0:
@@ -395,11 +414,14 @@ class Editor(Gtk.Application):
             return False
         if 'error' in update:
             self.device_error(update['error'])
-            self.follow_message = 'DPI colors stopped. Fix device access or connection, then Apply to restart.'
+            self.follow_message = 'Bottom RGB linking stopped. Fix device access or connection, then Apply to restart.'
         else:
             self.receive_status(update['status'])
             name = (self.doc.applied or {}).get('name') or 'Untitled profile'
-            self.follow_message = f'Following applied profile “{name}” · Stage {update["stage"]} → {update["color"]}'
+            if update.get('waiting_for_stage'):
+                self.follow_message = f'Mouse reports stage {update["stage"]}, outside this {update["stage_count"]}-stage profile. Bottom RGB linking will resume at a configured stage.'
+            else:
+                self.follow_message = f'Following applied profile “{name}” · Stage {update["stage"]} → bottom RGB {update["color"]}'
         self.update_follow_labels()
         self.apply_button.set_sensitive(not self.busy and not self.raw_dirty and self.ready and not self.offline)
         return False
@@ -413,11 +435,11 @@ class Editor(Gtk.Application):
     # Lighting ------------------------------------------------------------
     def build_lighting(self):
         content = self.page_header('lighting'); lighting = self.config['lighting']
-        linked = card('DPI stage colors', 'DPI linking uses a static color per stage and this page’s brightness. Your normal effect and palette are restored when linking is disabled and the profile is applied.')
+        linked = card('Bottom RGB colors by DPI stage', 'Linking changes the bottom lighting, using a static color and this page’s brightness. The wheel has a separate built-in indicator. Disable linking and Apply to restore the normal bottom effect and palette.')
         self.lighting_follow_label = label('', 'muted small', True); linked.append(self.lighting_follow_label)
-        linked.append(button('Edit DPI stage colors', lambda _: self.navigate('dpi')))
+        linked.append(button('Edit bottom stage colors', lambda _: self.navigate('dpi')))
         content.append(linked); self.update_follow_labels()
-        effects = card('Lighting effect'); content.append(effects)
+        effects = card('Bottom RGB lighting effect'); content.append(effects)
         grid = Gtk.Grid(column_spacing=10,row_spacing=10); effects.append(grid)
         self.effect_buttons = {}
         for i, name in enumerate(MODES):
@@ -444,9 +466,8 @@ class Editor(Gtk.Application):
             choice = button(f'Color {i+1}',lambda _,n=i:self.select_color(n))
             if i==lighting.get('selected_color',0):choice.add_css_class('selected')
             cell.append(choice)
-            rgba=Gdk.RGBA(); rgba.parse(color)
-            picker = Gtk.ColorDialogButton.new(Gtk.ColorDialog(title=f'Palette color {i+1}', with_alpha=False))
-            picker.set_rgba(rgba); picker.set_hexpand(True); picker.add_css_class('swatch'); cell.append(picker)
+            picker = color_picker(f'Bottom palette color {i+1}', color)
+            picker.set_hexpand(True); picker.add_css_class('swatch'); cell.append(picker)
             entry = Gtk.Entry(text=color,max_length=7,width_chars=8)
             entry.set_hexpand(True); cell.append(entry)
             picker.connect('notify::rgba',self.color_picked,i,entry)
@@ -853,12 +874,7 @@ class Editor(Gtk.Application):
         self.doc.config=deepcopy(self.doc.saved);self.raw_dirty=False;self.rebuild();self.notify('Restored the last saved profile in the editor.')
 
     def confirm(self,title,description,accept,callback):
-        dialog=Gtk.AlertDialog(message=title,detail=description,buttons=['Keep editing',accept],cancel_button=0,default_button=0)
-        def done(d,result):
-            try:
-                if d.choose_finish(result)==1:callback()
-            except GLib.Error:pass
-        dialog.choose(self.window,None,done)
+        return confirm(self.window,title,description,accept,callback)
 
     def guard_discard(self,callback):
         if self.doc.dirty or self.raw_dirty:self.confirm('Discard unsaved edits?', 'Your saved profile and current mouse settings will stay as they are.', 'Discard edits',callback)
@@ -930,7 +946,7 @@ class Editor(Gtk.Application):
             def finish(code,out,err):
                 if code:self.device_error(err or 'Authentication canceled. Device access was not enabled.')
                 else:self.read_status()
-            self.run_task(['/usr/bin/pkexec','/usr/bin/setfacl','-m',f'u:{os.getuid()}:rw',*paths],finish)
+            self.run_task(device_access_command(paths),finish)
         except (OSError,RuntimeError) as error:self.device_error(str(error));self.changed()
 
     def apply(self,*_):
@@ -949,7 +965,7 @@ class Editor(Gtk.Application):
                 result=json.loads(out);self.doc.mark_applied(snapshot);self.receive_status(result['status'])
                 self.follower.configure(snapshot)
                 if snapshot.get('dpi_lighting', {}).get('enabled'):
-                    self.follow_message='Starting DPI colors for the applied profile…'
+                    self.follow_message='Starting bottom RGB colors for the applied profile…'
                 try:
                     self.write_profile(WORKING,snapshot)
                     if self.profile_path==WORKING:self.doc.mark_saved(snapshot)

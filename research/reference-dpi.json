@@ -565,6 +565,264 @@
       ],
       "header": "000300000000070300",
       "payload": "000000000600000000c8002c019001182e7c2ee02ed007d007c8002c019001182e7c2ee02ed007d0070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff00000000ff00ff00ffff0000ffffff00ffff8000ffffff00000000000000000000000000000000f0000002f1000002f2000002f4000002f30000020300000b0200000b040103f00000000200000002000000020000000200000002000000020001000400020004"
+    },
+    {
+      "name": "one_stage",
+      "config": {
+        "schema": 1,
+        "name": "HATOR application defaults (not a device backup)",
+        "polling_hz": 1000,
+        "dpi": [
+          600
+        ],
+        "lighting": {
+          "mode": "horse-race",
+          "brightness": 4,
+          "speed": 4,
+          "selected_color": 0,
+          "colors": [
+            "#ff0000",
+            "#0000ff",
+            "#00ff00",
+            "#ffff00",
+            "#00ffff",
+            "#ff00ff",
+            "#ff8000",
+            "#ffffff"
+          ]
+        },
+        "buttons": {
+          "left": "left",
+          "right": "right",
+          "middle": "middle",
+          "forward": "forward",
+          "back": "back",
+          "dpi": "dpi-cycle"
+        },
+        "macros": []
+      },
+      "sections": [
+        "dpi"
+      ],
+      "header": "000300000000010300",
+      "payload": "0000000001000000005802d007d007d007d007d007d007d0075802d007d007d007d007d007d007d0070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff00000000ff00ff00ffff0000ffffff00ffff8000ffffff00000000000000000000000000000000f0000002f1000002f2000002f4000002f30000020300000b0200000b040103f00000000200000002000000020000000200000002000000020001000400020004"
+    },
+    {
+      "name": "one_stage",
+      "config": {
+        "schema": 1,
+        "name": "HATOR application defaults (not a device backup)",
+        "polling_hz": 1000,
+        "dpi": [
+          600
+        ],
+        "lighting": {
+          "mode": "horse-race",
+          "brightness": 4,
+          "speed": 4,
+          "selected_color": 0,
+          "colors": [
+            "#ff0000",
+            "#0000ff",
+            "#00ff00",
+            "#ffff00",
+            "#00ffff",
+            "#ff00ff",
+            "#ff8000",
+            "#ffffff"
+          ]
+        },
+        "buttons": {
+          "left": "left",
+          "right": "right",
+          "middle": "middle",
+          "forward": "forward",
+          "back": "back",
+          "dpi": "dpi-cycle"
+        },
+        "macros": []
+      },
+      "sections": [
+        "dpi",
+        "colors",
+        "buttons"
+      ],
+      "header": "000300000000070300",
+      "payload": "0000000001000000005802d007d007d007d007d007d007d0075802d007d007d007d007d007d007d0070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff00000000ff00ff00ffff0000ffffff00ffff8000ffffff00000000000000000000000000000000f0000002f1000002f2000002f4000002f30000020300000b0200000b040103f00000000200000002000000020000000200000002000000020001000400020004"
+    },
+    {
+      "name": "two_stages",
+      "config": {
+        "schema": 1,
+        "name": "HATOR application defaults (not a device backup)",
+        "polling_hz": 1000,
+        "dpi": [
+          3200,
+          600
+        ],
+        "lighting": {
+          "mode": "horse-race",
+          "brightness": 4,
+          "speed": 4,
+          "selected_color": 0,
+          "colors": [
+            "#ff0000",
+            "#0000ff",
+            "#00ff00",
+            "#ffff00",
+            "#00ffff",
+            "#ff00ff",
+            "#ff8000",
+            "#ffffff"
+          ]
+        },
+        "buttons": {
+          "left": "left",
+          "right": "right",
+          "middle": "middle",
+          "forward": "forward",
+          "back": "back",
+          "dpi": "dpi-cycle"
+        },
+        "macros": []
+      },
+      "sections": [
+        "dpi"
+      ],
+      "header": "000300000000010300",
+      "payload": "000000000200000000800c5802d007d007d007d007d007d007800c5802d007d007d007d007d007d0070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff00000000ff00ff00ffff0000ffffff00ffff8000ffffff00000000000000000000000000000000f0000002f1000002f2000002f4000002f30000020300000b0200000b040103f00000000200000002000000020000000200000002000000020001000400020004"
+    },
+    {
+      "name": "two_stages",
+      "config": {
+        "schema": 1,
+        "name": "HATOR application defaults (not a device backup)",
+        "polling_hz": 1000,
+        "dpi": [
+          3200,
+          600
+        ],
+        "lighting": {
+          "mode": "horse-race",
+          "brightness": 4,
+          "speed": 4,
+          "selected_color": 0,
+          "colors": [
+            "#ff0000",
+            "#0000ff",
+            "#00ff00",
+            "#ffff00",
+            "#00ffff",
+            "#ff00ff",
+            "#ff8000",
+            "#ffffff"
+          ]
+        },
+        "buttons": {
+          "left": "left",
+          "right": "right",
+          "middle": "middle",
+          "forward": "forward",
+          "back": "back",
+          "dpi": "dpi-cycle"
+        },
+        "macros": []
+      },
+      "sections": [
+        "dpi",
+        "colors",
+        "buttons"
+      ],
+      "header": "000300000000070300",
+      "payload": "000000000200000000800c5802d007d007d007d007d007d007800c5802d007d007d007d007d007d0070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff00000000ff00ff00ffff0000ffffff00ffff8000ffffff00000000000000000000000000000000f0000002f1000002f2000002f4000002f30000020300000b0200000b040103f00000000200000002000000020000000200000002000000020001000400020004"
+    },
+    {
+      "name": "three_reordered_stages",
+      "config": {
+        "schema": 1,
+        "name": "HATOR application defaults (not a device backup)",
+        "polling_hz": 1000,
+        "dpi": [
+          1200,
+          3200,
+          600
+        ],
+        "lighting": {
+          "mode": "horse-race",
+          "brightness": 4,
+          "speed": 4,
+          "selected_color": 0,
+          "colors": [
+            "#ff0000",
+            "#0000ff",
+            "#00ff00",
+            "#ffff00",
+            "#00ffff",
+            "#ff00ff",
+            "#ff8000",
+            "#ffffff"
+          ]
+        },
+        "buttons": {
+          "left": "left",
+          "right": "right",
+          "middle": "middle",
+          "forward": "forward",
+          "back": "back",
+          "dpi": "dpi-cycle"
+        },
+        "macros": []
+      },
+      "sections": [
+        "dpi"
+      ],
+      "header": "000300000000010300",
+      "payload": "000000000300000000b004800c5802d007d007d007d007d007b004800c5802d007d007d007d007d0070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff00000000ff00ff00ffff0000ffffff00ffff8000ffffff00000000000000000000000000000000f0000002f1000002f2000002f4000002f30000020300000b0200000b040103f00000000200000002000000020000000200000002000000020001000400020004"
+    },
+    {
+      "name": "three_reordered_stages",
+      "config": {
+        "schema": 1,
+        "name": "HATOR application defaults (not a device backup)",
+        "polling_hz": 1000,
+        "dpi": [
+          1200,
+          3200,
+          600
+        ],
+        "lighting": {
+          "mode": "horse-race",
+          "brightness": 4,
+          "speed": 4,
+          "selected_color": 0,
+          "colors": [
+            "#ff0000",
+            "#0000ff",
+            "#00ff00",
+            "#ffff00",
+            "#00ffff",
+            "#ff00ff",
+            "#ff8000",
+            "#ffffff"
+          ]
+        },
+        "buttons": {
+          "left": "left",
+          "right": "right",
+          "middle": "middle",
+          "forward": "forward",
+          "back": "back",
+          "dpi": "dpi-cycle"
+        },
+        "macros": []
+      },
+      "sections": [
+        "dpi",
+        "colors",
+        "buttons"
+      ],
+      "header": "000300000000070300",
+      "payload": "000000000300000000b004800c5802d007d007d007d007d007b004800c5802d007d007d007d007d0070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000ff00000000ff00ff00ffff0000ffffff00ffff8000ffffff00000000000000000000000000000000f0000002f1000002f2000002f4000002f30000020300000b0200000b040103f00000000200000002000000020000000200000002000000020001000400020004"
     }
   ]
 }

@@ -99,7 +99,7 @@ Priority: optional
 Architecture: all
 Maintainer: cjvnjde <cjvnjde@users.noreply.github.com>
 Installed-Size: {installed_size}
-Depends: python3 (>= 3.10), python3-gi, gir1.2-gtk-4.0 (>= 4.10), gir1.2-adw-1, pkexec, acl
+Depends: python3 (>= 3.10), python3-gi, gir1.2-gtk-4.0 (>= 4.6), gir1.2-adw-1, pkexec, acl
 Homepage: https://github.com/cjvnjde/pulsar-linux
 Description: Native Linux configurator for the HATOR Pulsar 3 mouse
  GTK4 interface and command-line tool for USB device 379a:3910.

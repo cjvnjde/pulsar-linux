@@ -1,8 +1,10 @@
-#!/usr/bin/env bash
-set -e
+#!/bin/sh
+set -eu
 cd -- "$(dirname -- "$(readlink -f -- "$0")")"
-if [[ -x /usr/bin/python3 ]]; then
-  exec /usr/bin/python3 -m pulsar3.gui "$@"
-else
-  exec /usr/bin/python -m pulsar3.gui "$@"
-fi
+for python_candidate in /usr/bin/python3 python3 /usr/bin/python python; do
+  if "$python_candidate" -c 'import sys; assert sys.version_info >= (3, 10); import gi; gi.require_version("Gtk", "4.0"); gi.require_version("Adw", "1"); from gi.repository import Gtk, Adw; assert (Gtk.get_major_version(), Gtk.get_minor_version()) >= (4, 6)' >/dev/null 2>&1; then
+    exec "$python_candidate" -m pulsar3.gui "$@"
+  fi
+done
+printf '%s\n' 'Pulsar 3 Studio needs Python 3.10+, PyGObject, GTK 4.6+, and libadwaita. Install these from your Linux distribution.' >&2
+exit 1

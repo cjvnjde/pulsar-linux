@@ -45,6 +45,7 @@ class DpiLightingTests(unittest.TestCase):
             original['lighting']['brightness'] * 63, SPEEDS[original['lighting']['speed']], 0]))
         self.assertEqual(self.profile['lighting'], original['lighting'])
         session.sent(2)
+        session.setup_sent()
         self.assertEqual(session.setup_packets(self.status), [])
         self.assertEqual(session.packets(self.status), [])
         switched = session.packets(dict(self.status, dpi_stage=3))
@@ -55,7 +56,7 @@ class DpiLightingTests(unittest.TestCase):
 
     def test_invalid_stage_or_external_parameter_change_never_writes(self):
         session = DpiLightingSession(self.profile)
-        for stage in (None, False, 0, 4):
+        for stage in (None, False, 0, 9):
             with self.subTest(stage=stage), self.assertRaises(ValueError):
                 session.packets(dict(self.status, dpi_stage=stage))
         with self.assertRaises(RuntimeError):
@@ -63,6 +64,35 @@ class DpiLightingTests(unittest.TestCase):
         session.sent(2)
         with self.assertRaises(RuntimeError):
             session.packets(dict(self.status, lighting_mode='breath'))
+
+    def test_reduced_stage_counts_wait_without_resetting_then_resume(self):
+        for count in (1, 2, 3):
+            with self.subTest(count=count):
+                self.profile['dpi'] = [400, 800, 1600][:count]
+                self.profile['dpi_lighting']['colors'] = ['#ff0000', '#00ff00', '#ffff00'][:count]
+                follower, mouse, updates = self.follower()
+                mouse.status.return_value = dict(self.status, dpi_stage=6)
+                follower.poll_once()
+                self.assertEqual(mouse.send.call_count, 1)  # establish static mode once
+                self.assertTrue(updates.call_args.args[1]['waiting_for_stage'])
+                self.assertIsNone(updates.call_args.args[1]['color'])
+                self.assertEqual(updates.call_args.args[1]['stage'], 6)
+                for _ in range(5):
+                    follower.poll_once()
+                self.assertEqual(mouse.send.call_count, 1)
+                self.assertNotIn('error', updates.call_args.args[1])
+                mouse.status.return_value['dpi_stage'] = count
+                follower.poll_once()
+                self.assertEqual(mouse.send.call_count, 2)
+                self.assertEqual(mouse.send.call_args.args[0].header[6], 2)
+                self.assertFalse(updates.call_args.args[1]['waiting_for_stage'])
+                self.assertEqual(updates.call_args.args[1]['color'], self.profile['dpi_lighting']['colors'][count-1])
+                # Leaving a valid slot and returning must refresh the bottom color.
+                mouse.status.return_value['dpi_stage'] = 6
+                follower.poll_once()
+                mouse.status.return_value['dpi_stage'] = count
+                follower.poll_once()
+                self.assertEqual(mouse.send.call_count, 3)
 
     def test_all_stage_changes_use_only_rgb_mask_and_identical_colors_skip_writes(self):
         self.profile['dpi'] = [400, 800, 1000, 1200, 1600, 3200]

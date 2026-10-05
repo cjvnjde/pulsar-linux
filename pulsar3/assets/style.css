@@ -37,6 +37,7 @@ window.pulsar { background: #101213; color: #ededeb; font-family: 'Inter', 'Adwa
 .pulsar scale highlight { background: #f2e32b; border-radius: 8px; }
 .pulsar scale slider { background: #f0f0e8; border: 2px solid #161819; min-width: 17px; min-height: 17px; margin: -8px; border-radius: 50%; box-shadow: none; }
 .pulsar .stage-row { background: #16191a; border: 1px solid #303537; border-radius: 9px; padding: 10px 12px; }
+.pulsar .stage-order button { padding: 6px 8px; }
 .pulsar .binding { padding: 11px 14px; }
 .pulsar .binding.active { border-color: #b9aa2b; background: #27271d; }
 .pulsar .message { color: #b8bebd; font-size: 12px; }

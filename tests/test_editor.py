@@ -2,7 +2,7 @@ import json
 from copy import deepcopy
 from pathlib import Path
 import unittest
-from pulsar3.editor_model import ProfileDocument, append_tap, macro_bytes, new_macro, remove_macro
+from pulsar3.editor_model import ProfileDocument, append_tap, macro_bytes, move_dpi_stage, new_macro, remove_macro
 from pulsar3.protocol import encode_macro, plan
 from pulsar3.recorder import Recording
 
@@ -26,6 +26,25 @@ class EditorModelTests(unittest.TestCase):
         doc=ProfileDocument(self.config);bad=deepcopy(self.config);bad['buttons']['left']='disabled'
         with self.assertRaises(ValueError):doc.load(bad)
         self.assertEqual(doc.config,self.config)
+
+    def test_reorder_dpi_and_custom_color_preserves_applied_snapshot(self):
+        self.config['dpi']=[1200,3200,600]
+        self.config['dpi_lighting']={'enabled':True,'colors':['#00ff00','#ff0000','#ff00ff']}
+        doc=ProfileDocument(self.config);doc.mark_applied(self.config)
+        move_dpi_stage(doc.config,2,0)
+        self.assertEqual(doc.config['dpi'],[600,1200,3200])
+        self.assertEqual(doc.config['dpi_lighting']['colors'],['#ff00ff','#00ff00','#ff0000'])
+        packet=plan(doc.validated(),['dpi'])[0]
+        self.assertEqual(packet.payload[4],3)
+        self.assertEqual(packet.payload[9:15],bytes.fromhex('58 02 b0 04 80 0c'))
+        self.assertEqual(doc.applied,self.config)
+        self.assertTrue(doc.pending)
+        move_dpi_stage(doc.config,0,2)
+        self.assertEqual(doc.config,self.config)
+        with self.assertRaises(ValueError):move_dpi_stage(doc.config,0,3)
+        del doc.config['dpi_lighting']
+        move_dpi_stage(doc.config,0,2)
+        self.assertEqual(doc.config['dpi'],[3200,600,1200])
 
     def test_shortcut_tap_is_balanced_and_uploads_before_binding(self):
         macro={'slot':4,'repeat':2,'events':[]};append_tap(macro,6,2000,3)

@@ -92,7 +92,8 @@ Linux pointer speed and acceleration are separate OS settings, not these hardwar
 | Effect speed | 0–4 | Five-step slider | Encoded and read in status; visual behavior needs testing |
 | Palette | Exactly eight RGB colors | Eight editable swatches | Implemented, testing needed |
 | Selected color | Palette index 0–7 | Select a swatch | Implemented, testing needed |
-| DPI-linked colors | One RGB color per configured stage | Toggle and color pickers on DPI & polling | Implemented in the Linux app; requires the app to stay running |
+| Bottom DPI-linked colors | One bottom RGB color per configured stage | Toggle and color pickers on DPI & polling | Implemented in the Linux app; requires the app to stay running; does not control the wheel |
+| Wheel indicator | Built-in stage colors | Read-only labels on DPI & polling | Manual reference; custom wheel colors are unsupported |
 
 Display palette positions as 1–8 if desired and convert to backend indices 0–7. Store colors as `#RRGGBB`.
 
@@ -100,13 +101,19 @@ Eight colors are a palette, **not eight independently addressable lighting zones
 
 DPI linking starts only after a successful GUI Apply. It monitors the active stage about twice per second and selects a static color at the applied brightness. The normal lighting configuration remains in the profile and is restored by disabling linking and applying. Closing the app leaves the last color; reconnects/errors stop following until another Apply. Draft edits never modify the running mapping. This does not establish a native onboard DPI-color association, and RGB values still cannot be read back.
 
-Unlinked stage swatches are disabled and show the manual's default indicator
-sequence (red, green, blue, cyan, yellow, purple), separately from the effect
-palette. Linked swatches edit the saved custom mapping. Lighting setup is followed
+Wheel labels show the manual's built-in indicator sequence (red, green, blue,
+cyan, yellow, purple). The separate bottom-color pickers show the saved custom
+mapping even when linking is off; editing requires linking. Lighting setup is followed
 by a fresh stage read before sending color data; all eight palette slots receive
 the active color while linked, and later stage changes never resend Parameter 0.
 
 The exact relationship between each effect, speed, brightness, and palette has not been fully characterized. Until tested, do not invent effect-specific restrictions or promise an exact animated preview. A preview can be labeled illustrative.
+
+Stages can be reordered with up/down buttons. DPI values and custom bottom colors
+move together; wheel colors stay with the numbered slots. All 1–6 stage counts
+are valid. A retained hardware stage outside a shortened profile pauses bottom
+color writes without disarming the follower or repeating setup; a configured
+stage resumes it automatically.
 
 ## Macros
 
@@ -204,7 +211,7 @@ Access may need to be enabled again after unplugging, changing ports, or rebooti
 
 Persistent access could be added later through an explicitly installed device-specific permission rule. That is **additional system integration**, not an existing toggle. The ordinary settings UI should not depend on being run as root.
 
-Current runtime: Linux USB access and Python 3; the existing GUI also uses GTK4/PyGObject. The permission action requires `pkexec`, a working graphical authentication agent, and `setfacl`. Windows, Wine, and a VM are unnecessary.
+Current runtime: Linux USB access and Python 3.10+; the GUI uses GTK 4.6+, PyGObject, and libadwaita with X11 or Wayland. Omarchy and Hyprland are not required. GTK 4.6–4.8 uses compatible color and confirmation dialogs. The permission action discovers `pkexec` and `setfacl` through PATH and requires a working graphical authentication agent. Windows, Wine, and a VM are unnecessary.
 
 ## Device status versus profile values
 

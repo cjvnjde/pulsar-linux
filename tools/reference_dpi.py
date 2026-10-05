@@ -63,7 +63,7 @@ const input = JSON.parse(fs.readFileSync(0, 'utf8'));
 const results = input.vectors.map(vector => {
     const stage = {root: {currentDpiCount: vector.dpi.length},
                    ui_View: {setDataList() {}, setData() {}}};
-    vector.dpi.concat([2000,2000]).forEach((value,index) => {
+    vector.dpi.concat(Array(8-vector.dpi.length).fill(2000)).forEach((value,index) => {
         stage[`dpi${index}TXT`] = {text:String(value)};
     });
     vm.createContext(stage);
@@ -96,7 +96,9 @@ def main():
               'only_last_3200': [200,200,200,200,200,3200],
               'higher_maximum': [400,800,1000,1200,1600,12000],
               'user_test': [400,800,1500,3000,6000,12000],
-              'boundaries': [200,300,400,11800,11900,12000]}
+              'boundaries': [200,300,400,11800,11900,12000],
+              'one_stage': [600], 'two_stages': [3200,600],
+              'three_reordered_stages': [1200,3200,600]}
     colors = list(bytes.fromhex(''.join(c[1:] for c in default['lighting']['colors'])))
     vectors = [{'name': name, 'dpi': dpi, 'mask': mask, 'colors': colors}
                for name, dpi in values.items() for mask in (1, 7)]
@@ -114,7 +116,7 @@ def main():
         fixtures.append({'name': vector['name'], 'config': config, 'sections': sections,
                          'header': original['header'], 'payload': original['payload']})
         words = struct.unpack_from('<8H', bytes.fromhex(original['payload']), 9)
-        if words[:6] != tuple(vector['dpi']):
+        if words[:len(vector['dpi'])] != tuple(vector['dpi']):
             raise RuntimeError(f'Original DPI encoding differs: {words}')
         print(vector['name'], 'mask', vector['mask'], 'DPI words', words)
     exe = ROOT / 'research/extracted/app/HATOR_Pulsar3_Software.exe'

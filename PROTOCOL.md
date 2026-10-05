@@ -90,9 +90,10 @@ DPI encoding audit on 2026-10-05: `tools/reference_dpi.py` extracts
 `DpiSetting.saveData` and `main.o_saveData1` directly from the original executable,
 evaluates those functions, and runs the original button conversion loop and
 Parameter 1 machine code in Unicorn, stopping before USB I/O. All 192 payload
-bytes and the feature header match the Linux planner in twelve cases recorded in
+bytes and the feature header match the Linux planner in eighteen cases recorded in
 `research/reference-dpi.json`, including all-200 stages, a last stage of 3200,
-and 400/800/1500/3000/6000/12000. DPI values are absolute little-endian uint16
+400/800/1500/3000/6000/12000, and one-, two-, and three-stage profiles in arbitrary
+order. DPI values are absolute little-endian uint16
 numbers for both axes. Changing the highest stage does not rescale other stages.
 The legacy sensor-specific one-byte encodings in `0x410290` are not called by this
 Parameter 1 path.
@@ -157,7 +158,16 @@ Their presence does not establish applicability to IC571. In particular, legacy
 active-stage `0B` was tried, did not change live status, and is not exposed in the UI.
 No speculative read/write opcodes, firmware flashing or hardware resets are used.
 
-## Host-side DPI-linked lighting
+## Wheel indicator and host-side bottom DPI-linked lighting
+
+The user clarified that Parameter 1's RGB palette changes the bottom lighting,
+while the scroll-wheel indicator retains its built-in colors. The recovered
+IC571 QML's DPI editor sends values and stage count, without a separate wheel
+palette. The executable also contains legacy `mouseSetRGBColor` / opcode `10`
+palette routines, but these calls are commented out in `LightControl.qml` and
+their applicability to this wheel is unverified. Their presence does not establish
+wheel-color support. The GUI therefore shows wheel colors as read-only manual
+references and labels custom colors explicitly as bottom RGB.
 
 `pulsar3/dpi_lighting.py` polls the existing status sync command roughly every
 0.5 seconds while the GUI runs. After a successful Apply, an optional
@@ -184,16 +194,23 @@ path; even an otherwise identical parameters write has this firmware side effect
 Full Apply (including the initial lighting setup) can still reset the active stage.
 
 Regression checks simulate a stage-3 to stage-2 reset during lighting setup and
-verify that the first color write and UI status both use stage 2. The revised
-all-slot palette behavior still needs a visible check on the user's mouse; RGB
-values cannot be read back. The UI's default unlinked swatches follow the
+verify that the first color write and UI status both use stage 2. The user observed
+custom bottom colors while the wheel remained independent; RGB values cannot be
+read back. The UI's wheel references follow the
 [wired HTM610/HTM611 manual](https://downloads.hator.com/wp-content/uploads/instructions/hator-mice-manual/HATOR_Pulsar%203_HTM610_HTM611_manual.pdf)
 (red, green, blue, cyan, yellow, purple), rather than the Windows effect palette.
 
 The worker shares a transaction lock with GUI Apply/status/access operations,
 releases interface 2 between polls, and ignores stale profile revisions. Device
-errors, invalid stages or unexpected polling/lighting status disarm it until
+errors, malformed stage reports or unexpected polling/lighting status disarm it until
 another successful Apply. It does not automatically resume after reconnecting,
 because the mouse cannot provide a full profile readback. Disabling linking and
 applying restores the ordinary lighting configuration. Closing leaves the last
 color selected. Colors themselves remain unavailable in readback.
+
+Reducing the profile to 1–3 stages must not turn a retained hardware stage into a
+profile validation error. The follower accepts hardware stage numbers 1–8,
+performs its setup once, and skips RGB writes while the reported stage is outside
+the applied mapping. It keeps polling and resumes at a configured stage without
+wrapping the number or guessing a color. Regression tests cover this transition
+for one-, two-, and three-stage profiles, including returning to the same color.

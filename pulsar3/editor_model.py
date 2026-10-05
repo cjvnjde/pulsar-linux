@@ -1,6 +1,6 @@
 """UI-facing profile operations. No device or desktop access."""
 from copy import deepcopy
-from .protocol import BUTTONS, encode_macro, plan
+from .protocol import BUTTONS, encode_macro, integer, plan
 
 KEY_NAMES = {i + 4: chr(65 + i) for i in range(26)}
 KEY_NAMES.update({30 + i: str((i + 1) % 10) for i in range(10)})
@@ -20,6 +20,7 @@ MODIFIERS = [('Ctrl',1),('Shift',2),('Alt',4),('Super',8),('Right Ctrl',16),('Ri
 # Wired HTM610/HTM611 manual, in stage order. These are independent of the
 # original application's eight-color effect palette.
 DPI_INDICATOR_COLORS = ('#ff0000', '#00ff00', '#0000ff', '#00ffff', '#ffff00', '#ff00ff')
+DPI_INDICATOR_NAMES = ('Red', 'Green', 'Blue', 'Cyan', 'Yellow', 'Purple')
 ACTION_LABELS = {'left':'Left click','right':'Right click','middle':'Wheel click','forward':'Forward',
     'back':'Back','double-click':'Double click','dpi-up':'DPI up','dpi-down':'DPI down',
     'dpi-cycle':'Cycle DPI stages','dpi-lock':'Sniper action (hold for low DPI)','disabled':'Disabled',
@@ -83,6 +84,17 @@ def remove_macro(config, slot):
             config['buttons'][button] = 'dpi-cycle' if button == 'dpi' else button
             restored.append(button)
     return restored
+
+
+def move_dpi_stage(config, source, destination):
+    """Move a DPI value and its custom bottom color together; wheel slots stay fixed."""
+    count = len(config['dpi'])
+    integer(source, 0, count - 1, 'Source stage')
+    integer(destination, 0, count - 1, 'Destination stage')
+    config['dpi'].insert(destination, config['dpi'].pop(source))
+    if 'dpi_lighting' in config:
+        colors = config['dpi_lighting']['colors']
+        colors.insert(destination, colors.pop(source))
 
 
 class ProfileDocument:
