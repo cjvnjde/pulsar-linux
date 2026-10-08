@@ -72,13 +72,48 @@ The package installs a **Pulsar 3 Studio** entry in the application menu and a
 `pulsar3` CLI. GTK 4.6 or newer is required; older distribution releases may not
 meet this requirement.
 
-### Arch Linux, Fedora, and other Linux distributions
+### Arch Linux
+
+Install the build tools, then build and install the package as your normal user:
+
+```sh
+sudo pacman -S --needed base-devel git
+```
+
+```sh
+git clone https://github.com/cjvnjde/pulsar-linux.git
+cd pulsar-linux/packaging/arch
+makepkg -si
+```
+
+Review `PKGBUILD` before running it. It downloads the versioned Linux release and
+desktop assets pinned to the matching release commit, verifies SHA-256 checksums,
+and installs runtime dependencies through pacman. Do not run `makepkg` as root.
+The package installs the **Pulsar 3 Studio** application-menu entry, `pulsar3-gui`,
+and the `pulsar3` CLI. A graphical Polkit authentication agent must be running for
+**Enable device access**; use your desktop's agent or install one for your session.
+
+For updates before an AUR publication, pull the repository and rebuild when its
+PKGBUILD version changes:
+
+```sh
+git pull --ff-only
+makepkg -si
+```
+
+This repository provides the recipe; it does not publish the package to AUR.
+If `pulsar3-studio` is published there in the future, install it with
+`paru -S pulsar3-studio` (or `yay -S pulsar3-studio`) and update with `paru -Syu`
+(or `yay -Syu`). AUR updates require its maintainer to update the recipe for each
+release; the helper does not track GitHub releases automatically.
+
+### Fedora and other Linux distributions (portable archive)
 
 Download and extract the `*-linux.tar.gz` archive. It contains the application,
 assets, defaults, and documentation. **Python and GTK are system dependencies;
 this archive is not a self-contained AppImage.**
 
-On Arch Linux, install any missing dependencies:
+Arch users who prefer the portable archive can install its dependencies with:
 
 ```sh
 sudo pacman -S --needed python python-gobject gtk4 libadwaita polkit acl
@@ -245,7 +280,7 @@ python3 -m pulsar3 plan pulsar3/data/default.json
 python3 -m pulsar3 apply /path/to/profile.json --commit
 ```
 
-With the Debian package, use `pulsar3` instead of `python3 -m pulsar3`.
+With the Debian or Arch package, use `pulsar3` instead of `python3 -m pulsar3`.
 `apply` without `--commit` previews packets without writing configuration.
 See the [user guide](USER_GUIDE.md) for selective writes and profile examples.
 
@@ -265,6 +300,19 @@ and runs this test under Xvfb against the installed code.
 The build script creates a Linux archive, architecture-independent Debian package,
 and SHA256 checksums from an explicit file list. No secrets or publishing credentials
 are required to run tests or produce artifacts.
+
+The Arch recipe lives in `packaging/arch/PKGBUILD`. Its CI job builds the pinned
+release with `makepkg`, inspects it with `namcap`, installs it, validates the desktop
+entry, and exercises the installed CLI and offline GUI. It tests the recipe's
+release version, while the other jobs test the current checkout.
+
+After publishing a new GitHub release, update the recipe's `pkgver`, reset `pkgrel`
+to `1`, and set `_commit` to that release's full commit SHA. Download and inspect
+the new sources, then regenerate their checksums with `updpkgsums` (`pacman-contrib`)
+and validate with `makepkg --verifysource` and `makepkg --cleanbuild -si`.
+For packaging-only changes to the same version, increment `pkgrel`. If publishing
+to AUR, copy the recipe into its separate AUR repository, generate `.SRCINFO` with
+`makepkg --printsrcinfo > .SRCINFO`, and commit both files for every update.
 
 To publish a release, update `pulsar3.__version__`, commit it, and push a matching
 `vMAJOR.MINOR.PATCH` tag. The workflow tests/builds it and attaches downloads to a
