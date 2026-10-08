@@ -1,0 +1,46 @@
+# Maintainer: cjvnjde <cjvnjde@users.noreply.github.com>
+pkgname=pulsar3-studio
+pkgver=0.1.2
+pkgrel=1
+pkgdesc='GTK4 configurator and CLI for the HATOR Pulsar 3 wired mouse'
+arch=('any')
+url='https://github.com/cjvnjde/pulsar-linux'
+license=('MIT')
+depends=('python>=3.10' 'python-gobject' 'gtk4>=4.6' 'libadwaita' 'polkit' 'acl')
+optdepends=('polkit-gnome: graphical authentication agent for device access (or another Polkit agent)')
+
+# The portable release omits desktop integration. Fetch those small assets from
+# the same release commit, never from the moving main branch.
+_commit=bf197dc0496facd26cffac3e0034118b85e26fe4
+_assets="https://raw.githubusercontent.com/cjvnjde/pulsar-linux/${_commit}/packaging"
+source=("${pkgname}-${pkgver}-linux.tar.gz::${url}/releases/download/v${pkgver}/${pkgname}-${pkgver}-linux.tar.gz"
+        "pulsar3::${_assets}/pulsar3"
+        "pulsar3-gui::${_assets}/pulsar3-gui"
+        "local.hator.Pulsar3.Studio.desktop::${_assets}/local.hator.Pulsar3.Studio.desktop"
+        "icon.svg::${_assets}/icon.svg")
+sha256sums=('a7d908a5c3dde27e705357efce67727f34bac581ec55a50dad02618ee05045c6'
+            '35e0eb475b4c38cc51ff4e4c90805f2e7323fe6c0a49d8cd6ce3d6e80d79d487'
+            '699970444c5d4b83349c3cbfa7328768b265824d6395c35c7949b8911af936e2'
+            '833af9a4ca94cf3e4465afd3a7df3b865417a769e18b1de26dbcbadaad1390a3'
+            'c51314b497329fb8c36a9bb1b680391a723f3e9e736bcfc55a1394bc7b8f221b')
+
+package() {
+    local release="${srcdir}/${pkgname}-${pkgver}"
+    install -d "${pkgdir}/usr/lib/${pkgname}"
+    cp -a "${release}/pulsar3" "${pkgdir}/usr/lib/${pkgname}/"
+
+    install -Dm755 "${srcdir}/pulsar3" "${pkgdir}/usr/bin/pulsar3"
+    install -Dm755 "${srcdir}/pulsar3-gui" "${pkgdir}/usr/bin/pulsar3-gui"
+    install -Dm644 "${srcdir}/local.hator.Pulsar3.Studio.desktop" \
+        "${pkgdir}/usr/share/applications/local.hator.Pulsar3.Studio.desktop"
+    install -Dm644 "${srcdir}/icon.svg" \
+        "${pkgdir}/usr/share/icons/hicolor/scalable/apps/local.hator.Pulsar3.Studio.svg"
+    install -Dm644 "${release}/LICENSE" "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+
+    local doc
+    for doc in README.md USER_GUIDE.md UI_CAPABILITIES.md PROTOCOL.md; do
+        install -Dm644 "${release}/${doc}" "${pkgdir}/usr/share/doc/${pkgname}/${doc}"
+    done
+    install -d "${pkgdir}/usr/share/doc/${pkgname}/docs"
+    cp -a "${release}/docs/screenshots" "${pkgdir}/usr/share/doc/${pkgname}/docs/"
+}

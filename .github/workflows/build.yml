@@ -99,6 +99,38 @@ jobs:
           NO_AT_BRIDGE: '1'
         run: xvfb-run -a dbus-run-session -- python3 tools/gui_smoke.py
 
+  arch-package:
+    name: Arch Linux release package
+    runs-on: ubuntu-24.04
+    container: archlinux:base
+    timeout-minutes: 15
+    steps:
+      - name: Install packaging and desktop dependencies
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git python python-gobject gtk4 libadwaita polkit acl desktop-file-utils namcap xorg-server-xvfb xorg-xauth dbus
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build and inspect the package as an unprivileged user
+        run: |
+          useradd --create-home builder
+          cp -r packaging/arch /home/builder/package
+          chown -R builder:builder /home/builder/package
+          su builder -c 'cd /home/builder/package && makepkg --cleanbuild --noconfirm'
+          namcap /home/builder/package/PKGBUILD /home/builder/package/*.pkg.tar.zst
+          pacman -U --noconfirm /home/builder/package/*.pkg.tar.zst
+          desktop-file-validate /usr/share/applications/local.hator.Pulsar3.Studio.desktop
+      - name: Exercise the installed CLI and GUI without a mouse
+        env:
+          PYTHONPATH: /usr/lib/pulsar3-studio
+          PULSAR_TEST_INSTALLED: '1'
+          PULSAR_NO_SCREENSHOTS: '1'
+          GDK_BACKEND: x11
+          GSK_RENDERER: cairo
+          NO_AT_BRIDGE: '1'
+        run: |
+          cd /tmp
+          pulsar3 plan /usr/lib/pulsar3-studio/pulsar3/data/default.json > /tmp/pulsar-plan.json
+          xvfb-run -a dbus-run-session -- python3 "$GITHUB_WORKSPACE/tools/gui_smoke.py"
+
   release:
     if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
     needs: [build, compatibility]
